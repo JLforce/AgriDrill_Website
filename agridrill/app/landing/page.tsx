@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import Image from "next/image";
+
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import LoginModal from "@/components/LoginModal";
 import SignupModal from "@/components/SignupModal";
@@ -79,6 +81,7 @@ const safetyCards = [
 ];
 
 export default function LandingPage() {
+  const router = useRouter();
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [signupModalOpen, setSignupModalOpen] = useState(false);
 
