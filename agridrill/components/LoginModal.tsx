@@ -1,6 +1,7 @@
 
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { getSupabaseBrowserClient } from "../lib/supabase/client";
 
@@ -11,6 +12,7 @@ interface LoginModalProps {
 }
 
 export default function LoginModal({ isOpen, onClose, onSwitchToSignup }: LoginModalProps) {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,6 +38,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }: LoginM
       }
       setIsSubmitting(false);
       onClose();
+      router.replace("/dashboard");
     } catch (err) {
       if (err instanceof Error) {
         setErrorMessage(err.message);
