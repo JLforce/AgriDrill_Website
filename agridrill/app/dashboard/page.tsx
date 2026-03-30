@@ -5,28 +5,29 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 const primaryNav = [
-  { label: "Dashboard", route: "/dashOperations" },
-  { label: "Control", route: "/control" },
-  { label: "Configuration", route: "/configuration" },
-  { label: "Magazine", route: "/magazine" },
-  { label: "Manual", route: null },
-  { label: "Logs", route: null },
+  { label: "Operations Dashboard", route: "/dashOperations" },
+  { label: "Robot Control", route: "/control" },
+  { label: "Field Configuration", route: "/configuration" },
+  { label: "Seedling Magazine", route: "/magazine" },
+  { label: "Session History", route: "/history" },
+  { label: "Session Detail", route: "/history-detail" },
+  { label: "Alerts & Fault Logs", route: "/alerts" },
 
 ];
 
 const secondaryNav = [
-  { label: "Settings", route: null },
-  { label: "Profile", route: null },
+  { label: "Settings", route: "/settings" },
+  { label: "Profile", route: "/profile" },
 ];
 
-const topNavLinks = ["Overview", "Camera", "Telemetry", "Operations", "Diagnostics"];
+const topNavLinks = ["Overview", "Camera", "Sensor", "Calibration", "Data Export"];
 
 const topNavRoutes = {
   Overview: "/dashboard",
   Camera: "/camera",
-  Telemetry: "/telemetry",
-  Operations: "/operations",
-  Diagnostics: "/diagnostics",
+  Sensor: "/sensor-debug",
+  Calibration: "/calibration",
+  "Data Export": "/export",
 };
 
 const stats = [
@@ -77,25 +78,33 @@ function DashboardContent() {
       </header>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((item, index) => (
-          <article key={item.label} className="rounded-xl border border-[#d1d5db] bg-[#f8fafc] p-4 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[#78978d]">{item.label}</p>
-            <p className={`mt-4 text-4xl font-bold leading-none tabular-nums ${index === 2 ? "text-[#10946d]" : "text-[#123d32]"}`}>
-              {item.value}
-            </p>
-            <p className="mt-3 text-xs leading-relaxed text-[#78978d]">{item.hint}</p>
-            {index === 1 ? (
-              <div className="mt-3 h-2 w-full rounded-full bg-[#d9e6f1]">
-                <div className="h-full w-[72%] rounded-full bg-[#23d7a3]" />
-              </div>
-            ) : null}
-            {index === 3 ? (
-              <span className="mt-3 inline-block rounded-md bg-[#dcf8ee] px-2 py-1 text-xs font-semibold text-[#108d69]">
-                ACTIVE
-              </span>
-            ) : null}
-          </article>
-        ))}
+        {/* Minimal summary cards only, no detailed/duplicated info */}
+        <article className="rounded-xl border border-[#d1d5db] bg-[#f8fafc] p-4 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[#78978d]">HOLES DRILLED</p>
+          <p className="mt-4 text-4xl font-bold leading-none tabular-nums text-[#123d32]">1,240</p>
+          <p className="mt-3 text-xs leading-relaxed text-[#78978d]">+12% from session start</p>
+        </article>
+        <article className="rounded-xl border border-[#d1d5db] bg-[#f8fafc] p-4 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[#78978d]">BATTERY LEVEL</p>
+          <p className="mt-4 text-4xl font-bold leading-none tabular-nums text-[#123d32]">85%</p>
+          <p className="mt-3 text-xs leading-relaxed text-[#78978d]">Stable output</p>
+          <div className="mt-3 h-2 w-full rounded-full bg-[#d9e6f1]">
+            <div className="h-full w-[72%] rounded-full bg-[#23d7a3]" />
+          </div>
+        </article>
+        <article className="rounded-xl border border-[#d1d5db] bg-[#f8fafc] p-4 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[#78978d]">OPERATING MODE</p>
+          <p className="mt-4 text-4xl font-bold leading-none tabular-nums text-[#10946d]">AUTO</p>
+          <p className="mt-3 text-xs leading-relaxed text-[#78978d]">Satellite Guidance Active</p>
+        </article>
+        <article className="rounded-xl border border-[#d1d5db] bg-[#f8fafc] p-4 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[#78978d]">SYSTEM STATUS</p>
+          <p className="mt-4 text-4xl font-bold leading-none tabular-nums text-[#123d32]">ACTIVE</p>
+          <p className="mt-3 text-xs leading-relaxed text-[#78978d]">Continuous operation: 02h 45m</p>
+          <span className="mt-3 inline-block rounded-md bg-[#dcf8ee] px-2 py-1 text-xs font-semibold text-[#108d69]">
+            ACTIVE
+          </span>
+        </article>
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
