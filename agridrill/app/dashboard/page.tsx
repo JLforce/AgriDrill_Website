@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 const primaryNav = [
-  { label: "Dashboard", route: "/dashOperations" },
+  { label: "Dashboard", route: "/dasperations" },
   { label: "Control", route: "/control" },
   { label: "Configuration", route: "/configuration" },
   { label: "Magazine", route: "/magazine" },
@@ -36,7 +36,13 @@ const stats = [
   { label: "System Status", value: "ACTIVE", hint: "Continuous operation: 02h 45m" },
 ];
 
-function NavItem({ label, active = false, onClick }) {
+type NavItemProps = {
+  label: string;
+  active?: boolean;
+  onClick?: () => void;
+};
+
+function NavItem({ label, active = false, onClick }: NavItemProps) {
   const className = `block w-full rounded-lg px-4 py-3 text-left text-sm font-medium transition duration-150 cursor-pointer ${
     active
       ? "bg-[#2f3742] text-white font-semibold shadow-[inset_0_0_0_1px_rgba(243,244,246,0.12)]"
@@ -142,11 +148,12 @@ export default function DashboardPage() {
       return;
     }
 
-    setPanelVisible(false);
+
     const panelTimer = setTimeout(() => {
+      setPanelVisible(false);
       setRenderPage(activePage);
       setPanelVisible(true);
-    }, 180);
+    }, 0);
 
     return () => clearTimeout(panelTimer);
   }, [activePage, renderPage]);
@@ -163,7 +170,7 @@ export default function DashboardPage() {
           pageReady ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
         }`}
       >
-        <div className="mx-auto flex w-full max-w-[1500px] items-center justify-between gap-4 px-4 py-3">
+        <div className="mx-auto flex w-full max-w-375 items-center justify-between gap-4 px-4 py-3">
           {/* Logo and Title */}
           <div className="flex items-center gap-3">
             <Image
@@ -186,7 +193,7 @@ export default function DashboardPage() {
                 <button
                   key={item}
                   type="button"
-                  onClick={() => router.push(topNavRoutes[item])}
+                  onClick={() => router.push(topNavRoutes[item as keyof typeof topNavRoutes])}
                   className={`rounded-full px-4 py-2 text-sm font-medium transition cursor-pointer ${
                     index === 0
                       ? "bg-[#334155] text-white shadow"
@@ -235,7 +242,7 @@ export default function DashboardPage() {
         </div>
       </nav>
 
-      <div className="mx-auto grid w-full max-w-[1500px] gap-4 p-4 lg:grid-cols-[250px_1fr]">
+      <div className="mx-auto grid w-full max-w-375 gap-4 p-4 lg:grid-cols-[250px_1fr]">
         <aside
           className={`hidden rounded-2xl border border-[#1f2937] bg-[#111827] p-3 lg:flex lg:min-h-[92vh] lg:flex-col transition-all duration-700 delay-100 ${
             pageReady ? "translate-x-0 opacity-100" : "-translate-x-3 opacity-0"
@@ -316,7 +323,7 @@ export default function DashboardPage() {
           pageReady ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
         }`}
       >
-        <div className="mx-auto flex w-full max-w-[1500px] flex-wrap items-center justify-between gap-3 px-6 py-3 text-xs text-[#75958b]">
+        <div className="mx-auto flex w-full max-w-375 flex-wrap items-center justify-between gap-3 px-6 py-3 text-xs text-[#75958b]">
           <div className="flex items-center gap-3">
             <span className="text-[11px] font-bold tracking-widest text-[#1f4f42]">AGRIDRILL DASHBOARD</span>
             <span className="text-[#c5ddd6]">|</span>
