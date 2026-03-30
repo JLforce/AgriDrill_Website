@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 const primaryNav = [
-  { label: "Dashboard", route: "/dasperations" },
+  { label: "Dashboard", route: "/dashOperations" },
   { label: "Control", route: "/control" },
   { label: "Configuration", route: "/configuration" },
   { label: "Magazine", route: "/magazine" },
