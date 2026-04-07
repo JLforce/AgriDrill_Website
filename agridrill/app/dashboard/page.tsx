@@ -216,8 +216,8 @@ export default function DashboardPage() {
           </div>
 
           {/* Status, E-STOP, Notifications, User */}
-          <div className="flex items-center gap-2">
-            <span className="hidden items-center gap-1.5 rounded-full border border-[#d1fae5] bg-[#f0fdf4] px-3 py-1 text-[12px] font-semibold text-[#166534] lg:inline-flex">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
+            <span className="flex items-center gap-1.5 rounded-full border border-[#d1fae5] bg-[#f0fdf4] px-3 py-1 text-[12px] font-semibold text-[#166534] min-w-0 mb-2 sm:mb-0">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M5 13a10 10 0 0 1 14 0" />
                 <path d="M8.5 16.5a5 5 0 0 1 7 0" />
@@ -229,22 +229,30 @@ export default function DashboardPage() {
             </span>
             <button
               type="button"
-              className="rounded-lg border border-[#b91c1c] bg-[#e6252f] px-4 py-2 text-xs font-extrabold tracking-wide text-white shadow-sm transition hover:bg-[#991b1b]"
+              className="rounded-lg border border-[#b91c1c] bg-[#e6252f] px-4 py-2 text-xs font-extrabold tracking-wide text-white shadow-sm transition hover:bg-[#991b1b] min-w-[90px] mb-2 sm:mb-0"
             >
               E-STOP
             </button>
             <button
               type="button"
-              className="relative rounded-lg border border-[#e5e7eb] bg-white p-2 text-[#64748b] shadow-sm transition hover:bg-[#f3f4f6] hover:text-[#334155]"
+              onClick={() => router.push('/notifications')}
+              className="relative rounded-full border border-[#e5e7eb] bg-white text-[#64748b] shadow-md transition hover:bg-[#f3f4f6] hover:text-[#334155] flex items-center justify-center min-w-[40px] min-h-[40px]"
+              style={{ width: 44, height: 44, minWidth: 40, minHeight: 40 }}
               aria-label="Notifications"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#e6252f]" />
+              <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-[#e6252f] border-2 border-white shadow-md" />
             </button>
-            <button type="button" className="rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 text-xs font-semibold text-[#334155] shadow-sm">
+            <button
+              type="button"
+              onClick={() => router.push('/profile')}
+              className="rounded-full border border-[#e5e7eb] bg-white text-base font-semibold text-[#334155] shadow flex items-center justify-center transition hover:bg-[#f3f4f6] focus:outline-none focus:ring-2 focus:ring-blue-200"
+              style={{ width: 44, height: 44, minWidth: 44, minHeight: 44 }}
+              aria-label="Profile"
+            >
               JR
             </button>
           </div>
