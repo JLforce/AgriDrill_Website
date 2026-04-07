@@ -290,7 +290,13 @@ export default function DashboardPage() {
                 key={item.label}
                 label={item.label}
                 active={activePage === item.label}
-                onClick={() => setActivePage(item.label)}
+                onClick={() => {
+                  if (item.label === "Settings") {
+                    router.push("/settings");
+                  } else {
+                    setActivePage(item.label);
+                  }
+                }}
               />
             ))}
           </div>
