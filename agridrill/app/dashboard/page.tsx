@@ -20,10 +20,10 @@ const secondaryNav = [
   { label: "Profile", route: "/profile" },
 ];
 
-const topNavLinks = ["Overview", "Camera", "Sensor", "Calibration", "Data Export"];
+const topNavLinks = ["Dashboard", "Camera", "Sensor", "Calibration", "Data Export"];
 
 const topNavRoutes = {
-  Overview: "/dashboard",
+  Dashboard: "/dashboard",
   Camera: "/camera",
   Sensor: "/sensor-debug",
   Calibration: "/calibration",
