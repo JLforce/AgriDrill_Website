@@ -293,6 +293,8 @@ export default function DashboardPage() {
                 onClick={() => {
                   if (item.label === "Settings") {
                     router.push("/settings");
+                  } else if (item.label === "Profile") {
+                    router.push("/profile");
                   } else {
                     setActivePage(item.label);
                   }
