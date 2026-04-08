@@ -1,6 +1,6 @@
 import React from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 const topNavLinks = ["Dashboard", "Camera", "Sensor", "Calibration", "Data Export"];
 const topNavRoutes = {
@@ -13,6 +13,7 @@ const topNavRoutes = {
 
 export default function DashboardTopNav() {
   const router = useRouter();
+  const pathname = usePathname();
   return (
     <nav className="sticky top-0 z-40 border-b border-[#e5e7eb] bg-[#f3f4f6] shadow-sm backdrop-blur transition-all duration-700">
       <div className="mx-auto flex w-full max-w-375 items-center justify-between gap-4 px-4 py-3">
@@ -39,20 +40,24 @@ export default function DashboardTopNav() {
           {/* Top Navigation Links */}
           <div className="flex-1 flex items-center justify-center">
             <div className="flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-white px-2 py-1 shadow-sm">
-              {topNavLinks.map((item, index) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => router.push(topNavRoutes[item as keyof typeof topNavRoutes])}
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition cursor-pointer ${
-                    index === 2
-                      ? "bg-[#334155] text-white shadow"
-                      : "text-[#334155] hover:bg-[#f3f4f6] hover:text-[#1e293b]"
-                  }`}
-                >
-                  {item}
-                </button>
-              ))}
+              {topNavLinks.map((item) => {
+                const route = topNavRoutes[item as keyof typeof topNavRoutes];
+                const isActive = pathname === route;
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => router.push(route)}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition cursor-pointer ${
+                      isActive
+                        ? "bg-[#334155] text-white shadow"
+                        : "text-[#334155] hover:bg-[#f3f4f6] hover:text-[#1e293b]"
+                    }`}
+                  >
+                    {item}
+                  </button>
+                );
+              })}
             </div>
           </div>
           {/* Status, E-STOP, Notifications, User */}
@@ -99,4 +104,4 @@ export default function DashboardTopNav() {
         </div>
       </nav>
     );
-}
+  }
