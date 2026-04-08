@@ -1,7 +1,9 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
+import DashboardTopNav from "../../components/DashboardTopNav";
 
 
 // Type definitions
@@ -95,17 +97,8 @@ export default function SensorDebugPage() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-50 to-blue-50 font-inter text-[16px] text-gray-900 flex flex-col">
-      {/* Sticky header */}
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-blue-100 flex items-center px-4 sm:px-10 py-4 shadow-sm">
-        <button
-          className="mr-4 flex items-center gap-2 px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 font-semibold hover:bg-blue-100 transition"
-          onClick={() => router.back()}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-          Back
-        </button>
-        <h1 className="text-2xl sm:text-3xl font-black text-green-600 tracking-tight drop-shadow-sm">Sensor Debug & Diagnostics</h1>
-      </header>
+      {/* Dashboard Top Navigation Bar */}
+      <DashboardTopNav />
       <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-10 animate-fadeInUp">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-14">
           {sensors.map((s: Sensor) => {
