@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import DashboardTopNav from "../../components/DashboardTopNav";
 
 // Dummy/fake data for UI prototyping
 const dummyConnection = {
@@ -61,51 +62,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 to-green-50 font-sans text-gray-900 flex flex-col text-[18px]">
-      {/* Top Navigation Bar */}
-      <nav className="sticky top-0 z-40 border-b border-[#e5e7eb] bg-white/95 shadow-sm backdrop-blur transition-all duration-700">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3">
-          {/* Logo and Title */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="flex items-center gap-3 group focus:outline-none"
-              onClick={() => router.push('/dashboard')}
-              aria-label="Go to Dashboard"
-            >
-              <Image
-                src="/agridrill-logo.png"
-                alt="AgriDrill logo"
-                width={36}
-                height={36}
-                className="rounded-lg border border-[#e5e7eb] bg-white object-contain p-1 shadow-sm group-hover:brightness-110 transition"
-              />
-              <div className="flex flex-col justify-center text-left">
-                <span className="text-base font-bold tracking-wide text-[#334155] leading-tight group-hover:text-[#1e293b] transition">AgriDrill</span>
-                <span className="text-[12px] text-[#64748b] leading-none">Mission Suite</span>
-              </div>
-            </button>
-          </div>
-          {/* Top Navigation Links */}
-          <div className="flex-1 flex items-center justify-center">
-            <div className="flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-white px-2 py-1 shadow-sm">
-              {topNavLinks.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => router.push(topNavRoutes[item as keyof typeof topNavRoutes])}
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition cursor-pointer ${
-                    item === "Settings"
-                      ? "bg-[#334155] text-white shadow"
-                      : "text-[#334155] hover:bg-[#f3f4f6] hover:text-[#1e293b]"
-                  }`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <DashboardTopNav />
       <main className="flex-1 w-full max-w-5xl mx-auto p-2 sm:p-12 animate-fadeInUp space-y-16">
         {/* Connection Info */}
         <section className="bg-white rounded-3xl shadow-2xl border border-blue-200 p-12 transition-transform duration-200 hover:scale-[1.015]">
