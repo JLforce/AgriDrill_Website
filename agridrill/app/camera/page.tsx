@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import DashboardTopNav from "../../components/DashboardTopNav";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -93,7 +94,9 @@ export default function CameraPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_18%_20%,#1e3a8a_0%,transparent_35%),radial-gradient(circle_at_85%_12%,#0f766e_0%,transparent_30%),#030712] text-white">
+    <>
+      <DashboardTopNav />
+      <main className="min-h-screen bg-[radial-gradient(circle_at_18%_20%,#1e3a8a_0%,transparent_35%),radial-gradient(circle_at_85%_12%,#0f766e_0%,transparent_30%),#030712] text-white pt-8 md:pt-12">
       {/* ── FEATURE CARD: LIVE MACHINE VISION ── */}
       {/* <div className="featureCard max-w-md mx-auto mt-24 mb-8 rounded-xl border-4 border-[#333] bg-[#18181b] p-6 shadow-lg">
         <h3 className="text-xl font-bold mb-4 text-white">Live Machine Vision</h3>
@@ -107,40 +110,7 @@ export default function CameraPage() {
           Status: <span style={{ color: 'green' }}>STREAMING LIVE</span>
         </p>
       </div> */}
-      {/* ── HEADER ─────────────────────────────────────────────── */}
-      <header
-        className={`absolute left-0 right-0 top-0 z-20 border-b border-[#1f2937] bg-black/55 backdrop-blur-md transition-all duration-700 ${
-          pageReady ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
-        }`}
-      >
-        <div className="mx-auto flex max-w-full items-center justify-between px-5 py-3">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="rounded-lg border border-[#334155] bg-[#111827] px-3 py-1.5 text-xs font-semibold text-[#dbeafe] transition hover:border-[#60a5fa] hover:text-white"
-            >
-              ← Back
-            </Link>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#93c5fd]">AgriDrill Vision</p>
-              <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-white">Live Camera Feed</h1>
-            </div>
-          </div>
- 
-          <div className="flex items-center gap-2">
-            <span className="hidden rounded-full border border-[#1e40af] bg-[#0f172a] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#93c5fd] md:inline-block">
-              Vision + CV Overlay
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowSettings(!showSettings)}
-              className="rounded-lg border border-[#334155] bg-[#0f172a] px-3 py-1.5 text-xs font-semibold text-[#dbeafe] transition hover:border-[#60a5fa] hover:text-white"
-            >
-              {showSettings ? "Hide Settings" : "Settings"}
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* Removed redundant header for cleaner layout. */}
  
       {/* ── LIVE STREAM CONTAINER ──────────────────────────────── */}
       <div className="relative h-screen w-full overflow-hidden bg-black pt-16">
@@ -392,5 +362,6 @@ export default function CameraPage() {
           </div>
         )}
       </main>
-    );
+    </>
+  );
 }
