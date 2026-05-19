@@ -15,10 +15,9 @@ interface StepperPosition {
 }
 
 const initialTrays: Tray[] = [
-  { trayNumber: 1, seedlings: 24, capacity: 24 },
-  { trayNumber: 2, seedlings: 12, capacity: 24 },
-  { trayNumber: 3, seedlings: 0, capacity: 24 },
-  { trayNumber: 4, seedlings: 18, capacity: 24 },
+  { trayNumber: 1, seedlings: 24, capacity: 15 },
+  { trayNumber: 2, seedlings: 12, capacity: 15 },
+  { trayNumber: 3, seedlings: 0, capacity: 15 },
 ];
 
 
