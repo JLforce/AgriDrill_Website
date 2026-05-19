@@ -422,6 +422,53 @@ export default function LandingPage() {
         onClose={() => setSignupModalOpen(false)}
         onSwitchToLogin={() => setLoginModalOpen(true)}
       />
+
+      {/* ── DEVELOPERS / TEAM SECTION ── */}
+      <section id="developers" className="mx-auto w-full max-w-7xl scroll-mt-24 px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl text-center fade-in-up">
+          <span className="inline-block rounded-full border border-[#47e3b6]/20 bg-[#47e3b6]/10 px-4 py-1 text-xs font-bold tracking-[0.16em] uppercase text-[#47e3b6] mb-4">
+            The Team Composition
+          </span>
+          <h2 className="text-4xl font-extrabold text-white tracking-tight pop-in">Meet the Developers</h2>
+          <div className="mx-auto mt-3 h-1 w-12 rounded-full bg-[#15d8a0]" />
+          <p className="mx-auto mt-5 max-w-xl text-[#9fc0b5] text-lg font-medium fade-in-up">
+            The engineers and innovators behind AgriDrill's autonomous farming platform.
+          </p>
+        </div>
+
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { name: "Celestra, Sybil Mae S.", role: "Firmware Engineer", desc: "Responsible for developing the low-level motor control and actuator firmware on the ESP32, translating high-level directional commands into precise hardware-level PWM signals via the BTS7960 drivers." },
+            { name: "Flores, Stefanny Jean T.", role: "Hardware Engineer", desc: "Oversees the structural assembly, power management routing, and hardware sequencing of the machine, ensuring a stable common ground and reliable safe voltage distribution from the LiFePO4 battery." },
+            { name: "Salado, Al Francis Daniel P.", role: "Computer Vision (CV) Engineer", desc: "Designs and optimizes the OpenCV image processing pipelines on the Raspberry Pi 5, handling real-time color thresholding, line following, obstacle detection, and spatial data extraction for autonomous navigation." },
+            { name: "Ybañez, Jafit Love R.", role: "Software Engineer", desc: "Develops the Mission Suite dashboard web application using TypeScript and integrates the high-level Flask API middleware to establish real-time system telemetry and live video stream monitoring." },
+          ].map((member, idx) => (
+            <article
+              key={idx}
+              className="pop-in rounded-2xl border border-[#15d8a0]/15 bg-[#062a23] p-7 text-center shadow-lg hover:scale-105 hover:border-[#15d8a0]/40 transition-transform duration-300"
+            >
+              {/* Photo placeholder — replace div with <Image> when ready */}
+              <div className="mx-auto mb-5 flex h-24 w-24 items-center justify-center rounded-full border-2 border-[#15d8a0]/25 bg-[#0a3d34]">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#15d8a0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.4">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
+              <p className="text-base font-bold text-white">{member.name}</p>
+              <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-[#47e3b6]">{member.role}</p>
+              <p className="mt-3 text-sm leading-relaxed text-[#7aaa9e]">{member.desc}</p>
+              <div className="mt-4 flex justify-center gap-3">
+                <a href="#" className="flex h-8 w-8 items-center justify-center rounded-full border border-[#15d8a0]/20 bg-[#0a3d34] text-[#47e3b6] transition hover:bg-[#15d8a0]/15">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+                </a>
+                <a href="#" className="flex h-8 w-8 items-center justify-center rounded-full border border-[#15d8a0]/20 bg-[#0a3d34] text-[#47e3b6] transition hover:bg-[#15d8a0]/15">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+                </a>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
     </main>
   );
 }
