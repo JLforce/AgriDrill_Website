@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 export default function CameraPage() {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -127,7 +127,7 @@ export default function CameraPage() {
           }}
         >
           <img
-            ref={videoRef as React.RefObject<HTMLImageElement>}
+            ref={videoRef}
             src="http://192.168.254.112:5000/video_feed"
             alt="Live Machine Vision Feed"
             style={{
