@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 export default function CameraPage() {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -126,14 +126,16 @@ export default function CameraPage() {
             filter: `brightness(${brightness + 50}%) contrast(${contrast + 50}%)`,
           }}
         >
-          <Image
+          <img
+            ref={videoRef}
             src="http://192.168.254.112:5000/video_feed"
             alt="Live Machine Vision Feed"
-            width={1280}
-            height={720}
-            style={{ borderRadius: '10px', border: '3px solid #333', width: '100%', height: 'auto' }}
-            unoptimized
-            priority
+            style={{
+              width: '100%',
+              height: '100%',
+            objectFit: 'contain',
+            }}
+            onError={() => console.warn('Camera feed unavailable')}
           />
         </div>
  
