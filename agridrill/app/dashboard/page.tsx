@@ -9,7 +9,6 @@ const primaryNav = [
   { label: "Session History", route: "/history" },
   { label: "Session Detail", route: "/history-detail" },
   { label: "Alerts & Fault Logs", route: "/alerts" },
-
 ];
 
 const secondaryNav = [
@@ -26,13 +25,6 @@ const topNavRoutes = {
   Calibration: "/calibration",
   "Data Export": "/export",
 };
-
-const stats = [
-  { label: "Holes Drilled", value: "1,240", hint: "+12% from session start" },
-  { label: "Battery Level", value: "85%", hint: "Stable output" },
-  { label: "Operating Mode", value: "AUTO", hint: "Satellite Guidance Active" },
-  { label: "System Status", value: "ACTIVE", hint: "Continuous operation: 02h 45m" },
-];
 
 type NavItemProps = {
   label: string;
@@ -54,7 +46,31 @@ function NavItem({ label, active = false, onClick }: NavItemProps) {
   );
 }
 
+const ESP32_BASE = "http://10.204.208.206";
+
+type MachineStatus = "idle" | "running" | "stopped" | "estop";
+
 function DashboardContent() {
+  const [status, setStatus] = useState<MachineStatus>("idle");
+  const [loading, setLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const sendCommand = async (command: "start" | "stop" | "resume" | "estop") => {
+    setLoading(command);
+    setError(null);
+    try {
+      await fetch(`${ESP32_BASE}/${command}`, { method: "POST" });
+      if (command === "start") setStatus("running");
+      else if (command === "stop") setStatus("stopped");
+      else if (command === "resume") setStatus("running");
+      else if (command === "estop") setStatus("estop");
+    } catch {
+      setError(`Failed to send ${command.toUpperCase()} command. Check device connection.`);
+    } finally {
+      setLoading(null);
+    }
+  };
+
   return (
     <>
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -64,23 +80,15 @@ function DashboardContent() {
             LIVE CONNECTED
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <button type="button" className="rounded-lg border border-[#cbd5e1] bg-[#f8fafc] px-3 py-2 text-xs text-[#64748b]">
-            Alerts
-          </button>
-          <button type="button" className="rounded-full border border-[#cbd5e1] bg-[#e5e7eb] px-3 py-2 text-xs text-[#334155]">
-            JR
-          </button>
-        </div>
       </header>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {/* Minimal summary cards only, no detailed/duplicated info */}
         <article className="rounded-xl border border-[#d1d5db] bg-[#f8fafc] p-4 shadow-sm">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-[#78978d]">HOLES DRILLED</p>
           <p className="mt-4 text-4xl font-bold leading-none tabular-nums text-[#123d32]">1,240</p>
           <p className="mt-3 text-xs leading-relaxed text-[#78978d]">+12% from session start</p>
         </article>
+
         <article className="rounded-xl border border-[#d1d5db] bg-[#f8fafc] p-4 shadow-sm">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-[#78978d]">BATTERY LEVEL</p>
           <p className="mt-4 text-4xl font-bold leading-none tabular-nums text-[#123d32]">85%</p>
@@ -89,45 +97,86 @@ function DashboardContent() {
             <div className="h-full w-[72%] rounded-full bg-[#23d7a3]" />
           </div>
         </article>
+
         <article className="rounded-xl border border-[#d1d5db] bg-[#f8fafc] p-4 shadow-sm">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-[#78978d]">OPERATING MODE</p>
           <p className="mt-4 text-4xl font-bold leading-none tabular-nums text-[#10946d]">AUTO</p>
           <p className="mt-3 text-xs leading-relaxed text-[#78978d]">Satellite Guidance Active</p>
         </article>
+
         <article className="rounded-xl border border-[#d1d5db] bg-[#f8fafc] p-4 shadow-sm">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-[#78978d]">SYSTEM STATUS</p>
-          <p className="mt-4 text-4xl font-bold leading-none tabular-nums text-[#123d32]">ACTIVE</p>
+          <p
+            className={`mt-4 text-4xl font-bold leading-none tabular-nums ${
+              status === "running"
+                ? "text-[#10946d]"
+                : status === "estop"
+                ? "text-[#dc2626]"
+                : status === "stopped"
+                ? "text-[#d97706]"
+                : "text-[#123d32]"
+            }`}
+          >
+            {status.toUpperCase()}
+          </p>
           <p className="mt-3 text-xs leading-relaxed text-[#78978d]">Continuous operation: 02h 45m</p>
-          <span className="mt-3 inline-block rounded-md bg-[#dcf8ee] px-2 py-1 text-xs font-semibold text-[#108d69]">
-            ACTIVE
+          <span
+            className={`mt-3 inline-block rounded-md px-2 py-1 text-xs font-semibold ${
+              status === "running"
+                ? "bg-[#dcf8ee] text-[#108d69]"
+                : status === "estop"
+                ? "bg-[#fef2f2] text-[#dc2626]"
+                : status === "stopped"
+                ? "bg-[#fef9ee] text-[#d97706]"
+                : "bg-[#e5e7eb] text-[#6b7280]"
+            }`}
+          >
+            {status.toUpperCase()}
           </span>
         </article>
       </div>
 
+      {error && (
+        <p className="mt-4 rounded-lg border border-[#fca5a5] bg-[#fef2f2] px-4 py-2 text-xs font-semibold text-[#dc2626]">
+          ⚠ {error}
+        </p>
+      )}
+
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <button
           type="button"
-          className="rounded-xl border border-[#1eb68d] bg-[#19c393] px-6 py-8 text-sm font-extrabold tracking-widest text-[#02241e] shadow-[0_0_24px_rgba(25,195,147,0.25)] transition hover:brightness-110"
+          onClick={() => sendCommand("start")}
+          disabled={loading !== null || status === "running"}
+          className="rounded-xl border border-[#1eb68d] bg-[#19c393] px-6 py-8 text-sm font-extrabold tracking-widest text-[#02241e] shadow-[0_0_24px_rgba(25,195,147,0.25)] transition hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          START
+          {loading === "start" ? "..." : "START"}
         </button>
+
         <button
           type="button"
-          className="rounded-xl border border-[#cbd5e1] bg-[#f8fafc] px-6 py-8 text-sm font-extrabold tracking-widest text-[#334155] transition hover:bg-[#e2e8f0]"
+          onClick={() => sendCommand("stop")}
+          disabled={loading !== null || status === "idle" || status === "stopped" || status === "estop"}
+          className="rounded-xl border border-[#cbd5e1] bg-[#f8fafc] px-6 py-8 text-sm font-extrabold tracking-widest text-[#334155] transition hover:bg-[#e2e8f0] disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          STOP
+          {loading === "stop" ? "..." : "STOP"}
         </button>
+
         <button
           type="button"
-          className="rounded-xl border border-[#cbd5e1] bg-[#f8fafc] px-6 py-8 text-sm font-extrabold tracking-widest text-[#334155] transition hover:bg-[#e2e8f0]"
+          onClick={() => sendCommand("resume")}
+          disabled={loading !== null || status !== "stopped"}
+          className="rounded-xl border border-[#cbd5e1] bg-[#f8fafc] px-6 py-8 text-sm font-extrabold tracking-widest text-[#334155] transition hover:bg-[#e2e8f0] disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          RESUME
+          {loading === "resume" ? "..." : "RESUME"}
         </button>
+
         <button
           type="button"
-          className="rounded-xl border border-[#ae2d35] bg-[#e6252f] px-6 py-8 text-sm font-extrabold tracking-widest text-white shadow-[0_0_28px_rgba(230,37,47,0.35)] transition hover:brightness-110"
+          onClick={() => sendCommand("estop")}
+          disabled={loading !== null || status === "estop" || status === "idle"}
+          className="rounded-xl border border-[#ae2d35] bg-[#e6252f] px-6 py-8 text-sm font-extrabold tracking-widest text-white shadow-[0_0_28px_rgba(230,37,47,0.35)] transition hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          E-STOP
+          {loading === "estop" ? "..." : "E-STOP"}
         </button>
       </div>
     </>
@@ -137,37 +186,19 @@ function DashboardContent() {
 export default function DashboardPage() {
   const router = useRouter();
   const [activePage, setActivePage] = useState("Dashboard");
-  const [renderPage, setRenderPage] = useState("Dashboard");
   const [pageReady, setPageReady] = useState(false);
-  const [panelVisible, setPanelVisible] = useState(true);
 
   useEffect(() => {
     const readyTimer = setTimeout(() => {
       setPageReady(true);
     }, 20);
-
     return () => clearTimeout(readyTimer);
   }, []);
 
-  useEffect(() => {
-    if (activePage === renderPage) {
-      return;
-    }
-
-
-    const panelTimer = setTimeout(() => {
-      setPanelVisible(false);
-      setRenderPage(activePage);
-      setPanelVisible(true);
-    }, 0);
-
-    return () => clearTimeout(panelTimer);
-  }, [activePage, renderPage]);
-
   const activeRoute = useMemo(() => {
-    const selected = primaryNav.find((item) => item.label === renderPage);
+    const selected = primaryNav.find((item) => item.label === activePage);
     return selected?.route ?? null;
-  }, [renderPage]);
+  }, [activePage]);
 
   return (
     <main className="min-h-screen bg-[#e5e7eb] text-[#1f2937]">
@@ -214,7 +245,7 @@ export default function DashboardPage() {
 
           {/* Status, E-STOP, Notifications, User */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
-            <span className="flex items-center gap-1.5 rounded-full border border-[#d1fae5] bg-[#f0fdf4] px-3 py-1 text-[12px] font-semibold text-[#166534] min-w-0 mb-2 sm:mb-0">
+            <span className="flex items-center gap-1.5 rounded-full border border-[#d1fae5] bg-[#f0fdf4] px-3 py-1 text-[12px] font-semibold text-[#166634] min-w-0 mb-2 sm:mb-0">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M5 13a10 10 0 0 1 14 0" />
                 <path d="M8.5 16.5a5 5 0 0 1 7 0" />
@@ -232,7 +263,7 @@ export default function DashboardPage() {
             </button>
             <button
               type="button"
-              onClick={() => router.push('/notifications')}
+              onClick={() => router.push("/notifications")}
               className="relative rounded-full border border-[#e5e7eb] bg-white text-[#64748b] shadow-md transition hover:bg-[#f3f4f6] hover:text-[#334155] flex items-center justify-center min-w-[40px] min-h-[40px]"
               style={{ width: 44, height: 44, minWidth: 40, minHeight: 40 }}
               aria-label="Notifications"
@@ -245,7 +276,7 @@ export default function DashboardPage() {
             </button>
             <button
               type="button"
-              onClick={() => router.push('/profile')}
+              onClick={() => router.push("/profile")}
               className="rounded-full border border-[#e5e7eb] bg-white text-base font-semibold text-[#334155] shadow flex items-center justify-center transition hover:bg-[#f3f4f6] focus:outline-none focus:ring-2 focus:ring-blue-200"
               style={{ width: 44, height: 44, minWidth: 44, minHeight: 44 }}
               aria-label="Profile"
@@ -320,15 +351,11 @@ export default function DashboardPage() {
             pageReady ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
           }`}
         >
-          <div
-            className={`transition-all duration-200 ${
-              panelVisible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
-            }`}
-          >
+          <div className="transition-all duration-200 translate-y-0 opacity-100">
             {activeRoute ? (
               <div className="h-[80vh] overflow-hidden rounded-xl border border-[#cbd5e1] bg-white">
                 <iframe
-                  title={`${renderPage} page`}
+                  title={`${activePage} page`}
                   src={activeRoute}
                   className="h-full w-full"
                 />
@@ -351,7 +378,6 @@ export default function DashboardPage() {
             <span className="text-[#c5ddd6]">|</span>
             <span>Mission Control UI Layer</span>
           </div>
-
           <div className="flex items-center gap-3">
             <span className="rounded-full border border-[#cbd5e1] bg-[#e5e7eb] px-2.5 py-1 text-[11px] font-semibold text-[#334155]">
               LINK STABLE
