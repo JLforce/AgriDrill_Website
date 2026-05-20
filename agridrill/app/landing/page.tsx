@@ -91,14 +91,14 @@ export default function LandingPage() {
         <header className="sticky top-0 z-50 border-b border-white/10 bg-[#042520]/80 backdrop-blur fade-in-up">
           <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
             <Link href="/landing" className="flex items-center gap-2 group">
-              <Image 
-                src="/agridrill-logo.png" 
-                alt="AgriDrill Logo" 
-                width={32} 
-                height={32} 
+              <Image
+                src="/agridrill-logo.png"
+                alt="AgriDrill Logo"
+                width={32}
+                height={32}
                 className="h-8 w-8"
               />
-              <span className="text-lg font-bold tracking-widest text-white group-hover:text-[#15d8a0] transition-colors duration-300" style={{letterSpacing: '0.18em'}}>AgriDrill</span>
+              <span className="text-lg font-bold tracking-widest text-white group-hover:text-[#15d8a0] transition-colors duration-300" style={{ letterSpacing: "0.18em" }}>AgriDrill</span>
             </Link>
 
             <nav className="hidden items-center gap-8 text-base text-[#b7d7cd] md:flex">
@@ -326,7 +326,58 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <footer id="developers" className="scroll-mt-24 border-t border-[#0f4b3f] bg-[linear-gradient(180deg,#041f1b_0%,#031713_100%)] fade-in-up">
+        {/* ── DEVELOPERS / TEAM SECTION ── */}
+        <section id="developers" className="mx-auto w-full max-w-7xl scroll-mt-24 px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl text-center fade-in-up">
+            <span className="inline-block rounded-full border border-[#47e3b6]/20 bg-[#47e3b6]/10 px-4 py-1 text-xs font-bold tracking-[0.16em] uppercase text-[#47e3b6] mb-4">
+              The Team Composition
+            </span>
+            <h2 className="text-4xl font-extrabold text-white tracking-tight pop-in">Meet the Developers</h2>
+            <div className="mx-auto mt-3 h-1 w-12 rounded-full bg-[#15d8a0]" />
+            <p className="mx-auto mt-5 max-w-xl text-[#9fc0b5] text-lg font-medium fade-in-up">
+              The engineers and innovators behind AgriDrill's autonomous farming platform.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { name: "Celestra, Sybil Mae S.", role: "Firmware Engineer", photo: "/celestra-firmware.jpg", desc: "Responsible for developing the low-level motor control and actuator firmware on the ESP32, translating high-level directional commands into precise hardware-level PWM signals via the BTS7960 drivers." },
+              { name: "Flores, Stefanny Jean T.", role: "Hardware Engineer", photo: "/flores-hardware.jpg", desc: "Oversees the structural assembly, power management routing, and hardware sequencing of the machine, ensuring a stable common ground and reliable safe voltage distribution from the LiFePO4 battery." },
+              { name: "Salado, Al Francis Daniel P.", role: "Computer Vision (CV) Engineer", photo: "/salado-compVision.jpg", desc: "Designs and optimizes the OpenCV image processing pipelines on the Raspberry Pi 5, handling real-time color thresholding, line following, obstacle detection, and spatial data extraction for autonomous navigation." },
+              { name: "Ybañez, Jafit Love R.", role: "Software Engineer", photo: "/ybanez-software.png", desc: "Develops the Mission Suite dashboard web application using TypeScript and integrates the high-level Flask API middleware to establish real-time system telemetry and live video stream monitoring." },
+            ].map((member, idx) => (
+              <article
+                key={idx}
+                className="pop-in rounded-2xl border border-[#15d8a0]/15 bg-[#062a23] p-7 text-center shadow-lg hover:scale-105 hover:border-[#15d8a0]/40 transition-transform duration-300"
+              >
+                {/* PHOTO PLACEHOLDER — add each member's photo to /public and update the filename in the array above */}
+                <div className="mx-auto mb-5 h-24 w-24 overflow-hidden rounded-full border-2 border-[#15d8a0]/25 bg-[#0a3d34]">
+                  <Image
+                    src={member.photo}
+                    alt={`Photo of ${member.name}`}
+                    width={96}
+                    height={96}
+                    className="h-full w-full object-cover object-center"
+                  />
+                </div>
+                <p className="text-base font-bold text-white">{member.name}</p>
+                <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-[#47e3b6]">{member.role}</p>
+                <p className="mt-3 text-sm leading-relaxed text-[#7aaa9e]">{member.desc}</p>
+                <div className="mt-4 flex justify-center gap-3">
+                  <a href="#" className="flex h-8 w-8 items-center justify-center rounded-full border border-[#15d8a0]/20 bg-[#0a3d34] text-[#47e3b6] transition hover:bg-[#15d8a0]/15">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" /></svg>
+                  </a>
+                  <a href="#" className="flex h-8 w-8 items-center justify-center rounded-full border border-[#15d8a0]/20 bg-[#0a3d34] text-[#47e3b6] transition hover:bg-[#15d8a0]/15">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" /><rect x="2" y="9" width="4" height="12" /><circle cx="4" cy="4" r="2" /></svg>
+                  </a>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* ── FOOTER ── */}
+        <footer className="border-t border-[#0f4b3f] bg-[linear-gradient(180deg,#041f1b_0%,#031713_100%)] fade-in-up">
           <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
             <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
               <div>
@@ -338,7 +389,7 @@ export default function LandingPage() {
                     height={30}
                     className="h-[30px] w-[30px]"
                   />
-                  <span className="text-lg font-bold tracking-widest text-white group-hover:text-[#15d8a0] transition-colors duration-300" style={{letterSpacing: '0.18em'}}>AgriDrill</span>
+                  <span className="text-lg font-bold tracking-widest text-white group-hover:text-[#15d8a0] transition-colors duration-300" style={{ letterSpacing: "0.18em" }}>AgriDrill</span>
                 </Link>
                 <p className="mt-4 max-w-xs text-sm leading-relaxed text-[#8fb1a6]">
                   Autonomous precision farming platform focused on safer field operations, real-time telemetry, and
@@ -349,54 +400,30 @@ export default function LandingPage() {
               <div>
                 <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-[#b2d6c9]">Navigation</h3>
                 <div className="mt-4 flex flex-col gap-2 text-sm text-[#8fb1a6]">
-                  <a href="#features" className="transition hover:text-white">
-                    Features
-                  </a>
-                  <a href="#technology" className="transition hover:text-white">
-                    Technology
-                  </a>
-                  <a href="#safety" className="transition hover:text-white">
-                    Safety
-                  </a>
-                  <a href="#developers" className="transition hover:text-white">
-                    Developers
-                  </a>
+                  <a href="#features" className="transition hover:text-white">Features</a>
+                  <a href="#technology" className="transition hover:text-white">Technology</a>
+                  <a href="#safety" className="transition hover:text-white">Safety</a>
+                  <a href="#developers" className="transition hover:text-white">Developers</a>
                 </div>
               </div>
 
               <div>
                 <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-[#b2d6c9]">Resources</h3>
                 <div className="mt-4 flex flex-col gap-2 text-sm text-[#8fb1a6]">
-                  <a href="#" className="transition hover:text-white">
-                    Privacy Policy
-                  </a>
-                  <a href="#" className="transition hover:text-white">
-                    Terms of Service
-                  </a>
-                  <a href="#" className="transition hover:text-white">
-                    Cookie Policy
-                  </a>
-                  <a href="#" className="transition hover:text-white">
-                    Documentation
-                  </a>
+                  <a href="#" className="transition hover:text-white">Privacy Policy</a>
+                  <a href="#" className="transition hover:text-white">Terms of Service</a>
+                  <a href="#" className="transition hover:text-white">Cookie Policy</a>
+                  <a href="#" className="transition hover:text-white">Documentation</a>
                 </div>
               </div>
 
               <div>
                 <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-[#b2d6c9]">Connect</h3>
                 <div className="mt-4 flex flex-col gap-2 text-sm text-[#8fb1a6]">
-                  <a href="mailto:hello@agridrill.dev" className="transition hover:text-white">
-                    hello@agridrill.dev
-                  </a>
-                  <a href="#" className="transition hover:text-white">
-                    LinkedIn
-                  </a>
-                  <a href="#" className="transition hover:text-white">
-                    GitHub
-                  </a>
-                  <a href="#" className="transition hover:text-white">
-                    Facebook
-                  </a>
+                  <a href="mailto:hello@agridrill.dev" className="transition hover:text-white">hello@agridrill.dev</a>
+                  <a href="#" className="transition hover:text-white">LinkedIn</a>
+                  <a href="#" className="transition hover:text-white">GitHub</a>
+                  <a href="#" className="transition hover:text-white">Facebook</a>
                 </div>
               </div>
             </div>
@@ -410,15 +437,15 @@ export default function LandingPage() {
       </div>
 
       {/* Login Modal */}
-      <LoginModal 
-        isOpen={loginModalOpen} 
+      <LoginModal
+        isOpen={loginModalOpen}
         onClose={() => setLoginModalOpen(false)}
         onSwitchToSignup={() => setSignupModalOpen(true)}
       />
-      
+
       {/* Signup Modal */}
-      <SignupModal 
-        isOpen={signupModalOpen} 
+      <SignupModal
+        isOpen={signupModalOpen}
         onClose={() => setSignupModalOpen(false)}
         onSwitchToLogin={() => setLoginModalOpen(true)}
       />
