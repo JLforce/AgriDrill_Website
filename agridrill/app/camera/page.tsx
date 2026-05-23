@@ -95,8 +95,22 @@ export default function CameraPage() {
 
   return (
     <>
-      {/* Main camera page content starts here */}
-      {/* The rest of your JSX content follows, starting with <DashboardTopNav /> and so on... */}
+      <DashboardTopNav />
+      <main className="min-h-screen bg-[radial-gradient(circle_at_18%_20%,#1e3a8a_0%,transparent_35%),radial-gradient(circle_at_85%_12%,#0f766e_0%,transparent_30%),#030712] text-white pt-8 md:pt-12">
+      {/* ── FEATURE CARD: LIVE MACHINE VISION ── */}
+      {/* <div className="featureCard max-w-md mx-auto mt-24 mb-8 rounded-xl border-4 border-[#333] bg-[#18181b] p-6 shadow-lg">
+        <h3 className="text-xl font-bold mb-4 text-white">Live Machine Vision</h3>
+        <img
+          src="http://192.168.254.107:5000/video_feed"
+          alt="Live Machine Vision Feed"
+          width="100%"
+          style={{ borderRadius: '10px', border: '3px solid #333' }}
+        />
+        <p className="mt-4 text-lg font-semibold text-white">
+          Status: <span style={{ color: 'green' }}>STREAMING LIVE</span>
+        </p>
+      </div> */}
+      {/* Removed redundant header for cleaner layout. */}
  
       {/* ── LIVE STREAM CONTAINER ──────────────────────────────── */}
       <div className="relative h-screen w-full overflow-hidden bg-black pt-16">
@@ -124,8 +138,9 @@ export default function CameraPage() {
             onError={() => console.warn('Camera feed unavailable')}
           />
         </div>
-      )}
-      {/* End of settings panel */}
+ 
+        {/* Canvas for snapshots - hidden */}
+        <canvas ref={canvasRef} className="hidden" />
  
         {/* ── CV OVERLAY BADGES ──────────────────────────────────── */}
         <div className="absolute left-4 top-20 z-10 flex flex-col gap-2 md:left-5">
@@ -345,10 +360,10 @@ export default function CameraPage() {
               <p className="text-xs text-[#cbd5e1]">Status: Connected</p>
             </div>
           </div>
-        </div>
-      }
-      {/* End of settings panel */}
-    </main>
-  </>
+          </div>
+          </div>
+        )}
+      </main>
+    </>
   );
 }
