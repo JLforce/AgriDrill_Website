@@ -344,7 +344,7 @@ export default function LandingPage() {
               { name: "Celestra, Sybil Mae S.", role: "Firmware Engineer", photo: "/celestra-firmware.jpg", desc: "Responsible for developing the low-level motor control and actuator firmware on the ESP32, translating high-level directional commands into precise hardware-level PWM signals via the BTS7960 drivers." },
               { name: "Flores, Stefanny Jean T.", role: "Hardware Engineer", photo: "/flores-hardware.jpg", desc: "Oversees the structural assembly, power management routing, and hardware sequencing of the machine, ensuring a stable common ground and reliable safe voltage distribution from the LiFePO4 battery." },
               { name: "Salado, Al Francis Daniel P.", role: "Computer Vision (CV) Engineer", photo: "/salado-compVision.jpg", desc: "Designs and optimizes the OpenCV image processing pipelines on the Raspberry Pi 5, handling real-time color thresholding, line following, obstacle detection, and spatial data extraction for autonomous navigation." },
-              { name: "Ybañez, Jafit Love R.", role: "Software Engineer", photo: "/ybanez-software.png", desc: "Develops the Mission Suite dashboard web application using TypeScript and integrates the high-level Flask API middleware to establish real-time system telemetry and live video stream monitoring." },
+              { name: "Ybañez, Jafit Love R.", role: "Software Engineer", photo: "/ybanez-software.png", desc: "Develops the Mission Suite dashboard web application using TypeScript and integrates middleware to establish real-time system telemetry and live video stream monitoring." },
             ].map((member, idx) => (
               <article
                 key={idx}
