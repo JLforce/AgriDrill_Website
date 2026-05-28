@@ -45,25 +45,25 @@ export default function CameraPage() {
     };
   }, []);
 
-  const handleSnapshot = useCallback(() => {
-    const canvas = canvasRef.current as HTMLCanvasElement | null;
-    const video = videoRef.current as HTMLVideoElement | null;
-    if (!canvas || !video) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
-    canvas.toBlob((blob: Blob | null) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `camera_snapshot_${Date.now()}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-    });
-  }, []);
+ const handleSnapshot = useCallback(() => {
+  const canvas = canvasRef.current;
+  const img = videoRef.current;
+  if (!canvas || !img) return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  ctx.drawImage(img, 0, 0);
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `camera_snapshot_${Date.now()}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}, []);
 
   const handleToggleRecord = useCallback(() => {
     setIsRecording((prev) => !prev);
@@ -128,11 +128,11 @@ export default function CameraPage() {
         >
           <img
             ref={videoRef}
-            src="http://192.168.254.112:5000/video_feed"
+            src="http://10.204.208.206:5000/video_feed"
             alt="Live Machine Vision Feed"
             style={{
-              width: '100%',
-              height: '100%',
+              width: '80%',
+              height: '80%',
             objectFit: 'contain',
             }}
             onError={() => console.warn('Camera feed unavailable')}
