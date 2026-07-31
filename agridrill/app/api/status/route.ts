@@ -1,18 +1,36 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Create a Supabase server-side client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 // Consider the machine online if its latest status
 // was received within the last 30 seconds.
 const ONLINE_THRESHOLD_MS = 30 * 1000;
 
+function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    return null;
+  }
+
+  return createClient(url, key);
+}
+
 export async function GET() {
   try {
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+      return NextResponse.json(
+        {
+          success: false,
+          online: false,
+          error: "Supabase configuration is missing on the server.",
+        },
+        { status: 500 }
+      );
+    }
+
     // Get the most recent telemetry/status record
     const { data, error } = await supabase
       .from("telemetry_events")
