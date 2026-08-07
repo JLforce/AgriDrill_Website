@@ -44,8 +44,17 @@ export interface ActivityRecord {
   readonly drive_speed: number;
 }
 
-/** Command values accepted by /api/command. Do not change without updating the firmware/MQTT contract. */
-export type Command = "F" | "B" | "L" | "R" | "S" | "D";
+/**
+ * Command values accepted by /api/command.
+ * Keep this synchronized with the ESP32 MQTT callback.
+ */
+export type Command =
+  | "F"
+  | "B"
+  | "L"
+  | "R"
+  | "S"
+  | "D";
 
 export type CardTone = "success" | "warning" | "danger" | "neutral";
 

@@ -139,7 +139,7 @@ export function RobotControl({ loadingCommand, activeCommand, onSendCommand }: R
         <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <div className="flex flex-col gap-3 sm:flex-row">
             <ControlActionButton
-              label="Drill"
+              label="Start"
               command="D"
               icon={FiTool}
               loading={loadingCommand === "D"}
@@ -148,7 +148,7 @@ export function RobotControl({ loadingCommand, activeCommand, onSendCommand }: R
               onPress={onSendCommand}
             />
             <ControlActionButton
-              label="Stop Drilling"
+              label="Stop"
               command="S"
               icon={FiPause}
               loading={loadingCommand === "S"}
@@ -157,7 +157,7 @@ export function RobotControl({ loadingCommand, activeCommand, onSendCommand }: R
               onPress={onSendCommand}
             />
           </div>
-          <p className="mt-3 text-xs text-slate-500">Movement commands map to F, B, L, R, and S. Drill uses D.</p>
+          <p className="mt-3 text-xs text-slate-500">Movement commands map to F, B, L, R, and S. START mirrors the original AgriDrill local controller.</p>
         </div>
       </div>
     </div>
