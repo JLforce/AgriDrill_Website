@@ -12,9 +12,7 @@ import { RecentActivityTable } from "@/components/dashboard/RecentActivityTable"
 import { RobotControl } from "@/components/dashboard/RobotControl";
 import { SensorGrid } from "@/components/dashboard/SensorGrid";
 import { Sidebar } from "@/components/dashboard/Sidebar";
-import { ToastViewport } from "@/components/dashboard/ToastViewport";
 import { TopNavbar } from "@/components/dashboard/TopNavbar";
-import { ToastProvider } from "@/hooks/useToast";
 import { useRobotCommands } from "@/hooks/useRobotCommands";
 import { useTelemetry } from "@/hooks/useTelemetry";
 import { getConnectionStatus } from "@/utils/connectionStatus";
@@ -67,34 +65,30 @@ export default function DashboardPage() {
   }, [activePage]);
 
   return (
-    <ToastProvider>
-      <main className="min-h-screen bg-[#e5e7eb] text-[#1f2937]">
-        <TopNavbar pageReady={pageReady} />
+    <main className="min-h-screen bg-[#e5e7eb] text-[#1f2937]">
+      <TopNavbar pageReady={pageReady} />
 
-        <div className="mx-auto grid w-full max-w-375 gap-4 p-4 lg:grid-cols-[250px_1fr]">
-          <Sidebar activePage={activePage} onSelectPage={setActivePage} pageReady={pageReady} />
+      <div className="mx-auto grid w-full max-w-375 gap-4 p-4 lg:grid-cols-[250px_1fr]">
+        <Sidebar activePage={activePage} onSelectPage={setActivePage} pageReady={pageReady} />
 
-          <section
-            className={`rounded-2xl border border-[#d1d5db] bg-[#f3f4f6] p-4 transition-all duration-700 delay-200 lg:p-6 ${
-              pageReady ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
-            }`}
-          >
-            <div className="translate-y-0 opacity-100 transition-all duration-200">
-              {activeRoute ? (
-                <div className="h-[80vh] overflow-hidden rounded-xl border border-[#cbd5e1] bg-white">
-                  <iframe title={`${activePage} page`} src={activeRoute} className="h-full w-full" />
-                </div>
-              ) : (
-                <DashboardContent />
-              )}
-            </div>
-          </section>
-        </div>
+        <section
+          className={`rounded-2xl border border-[#d1d5db] bg-[#f3f4f6] p-4 transition-all duration-700 delay-200 lg:p-6 ${
+            pageReady ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
+          }`}
+        >
+          <div className="translate-y-0 opacity-100 transition-all duration-200">
+            {activeRoute ? (
+              <div className="h-[80vh] overflow-hidden rounded-xl border border-[#cbd5e1] bg-white">
+                <iframe title={`${activePage} page`} src={activeRoute} className="h-full w-full" />
+              </div>
+            ) : (
+              <DashboardContent />
+            )}
+          </div>
+        </section>
+      </div>
 
-        <Footer pageReady={pageReady} />
-      </main>
-
-      <ToastViewport />
-    </ToastProvider>
+      <Footer pageReady={pageReady} />
+    </main>
   );
 }

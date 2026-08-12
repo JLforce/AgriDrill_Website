@@ -34,7 +34,10 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }: Signup
     setIsSubmitting(true);
     try {
       const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.auth.signUp({
+      const {
+        data,
+        error,
+      } = await supabase.auth.signUp({
         email,
         password,
         options: { data: { full_name: fullname } },
@@ -44,6 +47,30 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }: Signup
         setIsSubmitting(false);
         return;
       }
+      
+      if (data.user) {
+        const response = await fetch("/api/profile/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      id: data.user.id,
+      full_name: fullname,
+      email: data.user.email,
+      phone: "",
+      location: "",
+      avatar_url: "",
+    }),
+  });
+
+  const result = await response.json();
+
+  console.log("Profile API Status:", response.status);
+  console.log("Profile API Response:", result);
+}
+      
+
       setIsSubmitting(false);
       onClose();
     } catch (err) {
