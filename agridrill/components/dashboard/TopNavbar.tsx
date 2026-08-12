@@ -1,15 +1,55 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { topNavLinks, topNavRoutes } from "@/constants/navigation";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 interface TopNavbarProps {
   readonly pageReady: boolean;
 }
 
+function getInitials(name: string | null | undefined): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 export function TopNavbar({ pageReady }: TopNavbarProps) {
   const router = useRouter();
+
+  const [initials, setInitials] = useState("?");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const supabase = getSupabaseBrowserClient();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, avatar_url")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profile?.full_name) {
+        setInitials(getInitials(profile.full_name));
+      }
+
+      if (profile?.avatar_url) {
+        setAvatarUrl(profile.avatar_url);
+      }
+    };
+
+    loadUser();
+  }, []);
 
   return (
     <nav
@@ -93,11 +133,22 @@ export function TopNavbar({ pageReady }: TopNavbarProps) {
           <button
             type="button"
             onClick={() => router.push("/profile")}
-            className="flex items-center justify-center rounded-full border border-[#e5e7eb] bg-white text-base font-semibold text-[#334155] shadow transition hover:bg-[#f3f4f6] focus:outline-none focus:ring-2 focus:ring-blue-200"
+            className="flex items-center justify-center overflow-hidden rounded-full border border-[#e5e7eb] bg-white text-base font-semibold text-[#334155] shadow transition hover:bg-[#f3f4f6] focus:outline-none focus:ring-2 focus:ring-blue-200"
             style={{ width: 44, height: 44, minWidth: 44, minHeight: 44 }}
             aria-label="Profile"
           >
-            JR
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt="Profile"
+                width={44}
+                height={44}
+                unoptimized
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              initials
+            )}
           </button>
         </div>
       </div>

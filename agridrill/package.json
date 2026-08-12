@@ -19,6 +19,7 @@
     "@tanstack/react-virtual": "^3.13.23",
     "date-fns": "^4.1.0",
     "dotenv": "^17.4.2",
+    "lucide-react": "^1.29.0",
     "mqtt": "^5.15.2",
     "next": "16.2.1",
     "papaparse": "^5.5.3",
