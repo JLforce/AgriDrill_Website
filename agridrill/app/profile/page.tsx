@@ -1,5 +1,6 @@
 "use client";
 
+import { TopNavbar } from "@/components/dashboard/TopNavbar";
 import { useEffect, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/useToast";
@@ -218,17 +219,28 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return (
-      <main className="min-h-screen bg-slate-950 p-6">
-        <div className="mx-auto max-w-7xl">
-          <p className="text-slate-400">Loading...</p>
+  return (
+    <>
+      <TopNavbar pageReady={true} />
+      <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative h-14 w-14">
+            <div className="absolute inset-0 rounded-full border-4 border-slate-800" />
+            <div className="absolute inset-0 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+          </div>
+          <p className="animate-pulse text-sm font-medium text-slate-400">
+            Loading profile...
+          </p>
         </div>
       </main>
-    );
-  }
+    </>
+  );
+}
 
   if (notFound) {
-    return (
+  return (
+    <>
+      <TopNavbar pageReady={true} />
       <main className="min-h-screen bg-slate-950 p-6">
         <div className="mx-auto max-w-7xl">
           <p className="text-slate-400">
@@ -236,47 +248,51 @@ export default function ProfilePage() {
           </p>
         </div>
       </main>
-    );
-  }
+    </>
+  );
+}
 
   return (
-    <main className="min-h-screen bg-slate-950 p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <ProfileHeader />
+    <>
+      <TopNavbar pageReady={true} />
+      <main className="min-h-screen bg-slate-950 p-6">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <ProfileHeader />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <ProfileAvatar
-            profile={profile}
-            isEditing={isEditing}
-            avatarPreview={avatarPreview}
-            onFileSelect={handleAvatarSelect}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <ProfileAvatar
+              profile={profile}
+              isEditing={isEditing}
+              avatarPreview={avatarPreview}
+              onFileSelect={handleAvatarSelect}
+            />
+
+            <div className="lg:col-span-2">
+              <PersonalInformation
+                profile={profile}
+                draft={draft}
+                isEditing={isEditing}
+                onChange={setDraft}
+              />
+            </div>
+          </div>
+
+          <AccountSettings authProvider={authProvider} />
+
+          <SystemInformation
+            accountCreated={accountCreated}
+            lastLogin={lastLogin}
           />
 
-          <div className="lg:col-span-2">
-            <PersonalInformation
-              profile={profile}
-              draft={draft}
-              isEditing={isEditing}
-              onChange={setDraft}
-            />
-          </div>
+          <ProfileActions
+            isEditing={isEditing}
+            saving={saving}
+            onEdit={handleEdit}
+            onCancel={handleCancel}
+            onSave={handleSave}
+          />
         </div>
-
-        <AccountSettings authProvider={authProvider} />
-
-        <SystemInformation
-          accountCreated={accountCreated}
-          lastLogin={lastLogin}
-        />
-
-        <ProfileActions
-          isEditing={isEditing}
-          saving={saving}
-          onEdit={handleEdit}
-          onCancel={handleCancel}
-          onSave={handleSave}
-        />
-      </div>
-    </main>
+      </main>
+    </>
   );
 }
