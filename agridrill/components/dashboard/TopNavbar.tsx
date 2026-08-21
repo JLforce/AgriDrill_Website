@@ -57,7 +57,7 @@ export function TopNavbar({ pageReady }: TopNavbarProps) {
         pageReady ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
       }`}
     >
-      <div className="mx-auto flex w-full max-w-375 items-center justify-between gap-4 px-4 py-3">
+      <div className="mx-auto flex w-full max-w-375 items-center gap-4 px-4 py-3">
         <div className="flex items-center gap-3">
           <Image
             src="/agridrill-logo.png"
@@ -72,7 +72,7 @@ export function TopNavbar({ pageReady }: TopNavbarProps) {
           </div>
         </div>
 
-        <div className="flex flex-1 items-center justify-center">
+        <div className="flex flex-1 items-center justify-center pl-6">
           <div className="flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-white px-2 py-1 shadow-sm">
             {topNavLinks.map((item, index) => (
               <button
@@ -89,7 +89,7 @@ export function TopNavbar({ pageReady }: TopNavbarProps) {
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+        <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
           <span className="mb-2 flex min-w-0 items-center gap-1.5 rounded-full border border-[#d1fae5] bg-[#f0fdf4] px-3 py-1 text-[12px] font-semibold text-[#166634] sm:mb-0">
             <svg
               xmlns="http://www.w3.org/2000/svg"
