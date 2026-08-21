@@ -2,13 +2,10 @@ import React from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 
-const topNavLinks = ["Dashboard", "Camera", "Sensor", "Calibration", "Data Export"];
+const topNavLinks = ["Dashboard", "Camera"];
 const topNavRoutes = {
   Dashboard: "/dashboard",
   Camera: "/camera",
-  Sensor: "/sensor-debug",
-  Calibration: "/calibration",
-  "Data Export": "/export",
 };
 
 export default function DashboardTopNav() {

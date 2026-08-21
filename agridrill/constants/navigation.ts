@@ -12,14 +12,11 @@ export const secondaryNav: readonly NavLinkItem[] = [
   { label: "Profile", route: "/profile" },
 ];
 
-export const topNavLinks = ["Dashboard", "Camera", "Sensor", "Calibration", "Data Export"] as const;
+export const topNavLinks = ["Dashboard", "Camera"] as const;
 
 export type TopNavLink = (typeof topNavLinks)[number];
 
 export const topNavRoutes: Record<TopNavLink, string> = {
   Dashboard: "/dashboard",
   Camera: "/camera",
-  Sensor: "/sensor-debug",
-  Calibration: "/calibration",
-  "Data Export": "/export",
 };
