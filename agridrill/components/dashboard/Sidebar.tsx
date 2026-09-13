@@ -57,6 +57,14 @@ export function Sidebar({ activePage, onSelectPage, pageReady }: SidebarProps) {
       </div>
 
       <div className="space-y-1">
+        <NavItem
+          label="Dashboard"
+          active={activePage === "Dashboard"}
+          onClick={() => {
+            onSelectPage("Dashboard");
+            router.push("/dashboard");
+          }}
+        />
         {primaryNav.map((item) => (
           <NavItem key={item.label} label={item.label} active={activePage === item.label} onClick={() => onSelectPage(item.label)} />
         ))}
@@ -83,11 +91,6 @@ export function Sidebar({ activePage, onSelectPage, pageReady }: SidebarProps) {
         ))}
       </div>
 
-      <div className="mt-auto rounded-xl border border-[#1f2937] bg-[#0f172a] p-4">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-[#94a3b8]">System Link</p>
-        <p className="mt-2 text-xs text-[#cbd5e1]">LAT: 45.523062</p>
-        <p className="text-xs text-[#cbd5e1]">LON: -122.676482</p>
-      </div>
     </aside>
   );
 }

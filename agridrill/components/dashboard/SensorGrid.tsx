@@ -13,7 +13,7 @@ interface SensorGridProps {
 
 export function SensorGrid({ telemetry, lastUpdatedIso, hasTelemetry }: SensorGridProps) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
+    <div className="dashboard-card rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Live Sensor Monitoring</h2>
@@ -26,8 +26,8 @@ export function SensorGrid({ telemetry, lastUpdatedIso, hasTelemetry }: SensorGr
       </div>
 
       {hasTelemetry && telemetry ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {SENSOR_DEFINITIONS.map((definition) => (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
+          {SENSOR_DEFINITIONS.filter(({ telemetryKey }) => telemetryKey === "ir1" || telemetryKey === "ir4").map((definition) => (
             <SensorCard
               key={definition.telemetryKey}
               sensor={{ ...definition, value: telemetry[definition.telemetryKey] }}

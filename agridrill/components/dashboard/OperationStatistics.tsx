@@ -1,6 +1,6 @@
 "use client";
 
-import { FiBattery, FiGrid, FiLayers, FiTarget, FiZap } from "react-icons/fi";
+import { FiGrid, FiLayers, FiTarget, FiZap } from "react-icons/fi";
 import { MAX_DRIVE_SPEED } from "@/constants/dashboard";
 import { type MachineTelemetry, type OperationStat } from "@/types/dashboard";
 import { useAnimatedNumber } from "@/hooks/useAnimatedNumber";
@@ -13,7 +13,6 @@ interface OperationStatisticsProps {
 
 function buildStats(telemetry: MachineTelemetry): OperationStat[] {
   return [
-    { label: "Battery Percentage", value: `${telemetry.battery_percent}%`, numericValue: telemetry.battery_percent, suffix: "%", progress: telemetry.battery_percent, icon: FiBattery },
     { label: "Seed Count", value: telemetry.seed_count.toString(), numericValue: telemetry.seed_count, icon: FiLayers },
     { label: "Hole Count", value: telemetry.hole_count.toString(), numericValue: telemetry.hole_count, icon: FiTarget },
     {
@@ -33,7 +32,7 @@ function StatCard({ stat }: { stat: OperationStat }) {
   const tone = stat.progress !== undefined ? toneForPercent(stat.progress) : "neutral";
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <article className="dashboard-card rounded-2xl border border-slate-200 bg-slate-50 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{stat.label}</p>
@@ -69,11 +68,11 @@ function StatCardSkeleton() {
   );
 }
 
-const SKELETON_KEYS = ["battery", "seeds", "holes", "speed"];
+const SKELETON_KEYS = ["seeds", "holes", "speed"];
 
 export function OperationStatistics({ telemetry, isLoading }: OperationStatisticsProps) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
+    <div className="dashboard-card rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
       <div className="mb-5 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Operation Statistics</h2>
@@ -82,7 +81,7 @@ export function OperationStatistics({ telemetry, isLoading }: OperationStatistic
         <FiGrid className="mt-1 h-5 w-5 text-slate-400" aria-hidden="true" />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         {isLoading || !telemetry
           ? SKELETON_KEYS.map((key) => <StatCardSkeleton key={key} />)
           : buildStats(telemetry).map((stat) => <StatCard key={stat.label} stat={stat} />)}
