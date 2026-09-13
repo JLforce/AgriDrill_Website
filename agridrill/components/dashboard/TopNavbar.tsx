@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { topNavLinks, topNavRoutes } from "@/constants/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -19,6 +19,7 @@ function getInitials(name: string | null | undefined): string {
 
 export function TopNavbar({ pageReady }: TopNavbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
 
   const [initials, setInitials] = useState("?");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -74,13 +75,15 @@ export function TopNavbar({ pageReady }: TopNavbarProps) {
 
         <div className="flex flex-1 items-center justify-center pl-6">
           <div className="flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-white px-2 py-1 shadow-sm">
-            {topNavLinks.map((item, index) => (
+            {topNavLinks.map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => router.push(topNavRoutes[item])}
                 className={`cursor-pointer rounded-full px-4 py-2 text-sm font-medium transition ${
-                  index === 0 ? "bg-[#334155] text-white shadow" : "text-[#334155] hover:bg-[#f3f4f6] hover:text-[#1e293b]"
+                  pathname === topNavRoutes[item]
+                    ? "bg-[#334155] text-white shadow"
+                    : "text-[#334155] hover:bg-[#f3f4f6] hover:text-[#1e293b]"
                 }`}
               >
                 {item}
@@ -111,12 +114,6 @@ export function TopNavbar({ pageReady }: TopNavbarProps) {
             Wi-Fi | Supabase Realtime
             <span className="ml-1 h-2 w-2 rounded-full bg-[#16a34a]" />
           </span>
-          <button
-            type="button"
-            className="mb-2 min-w-22.5 rounded-lg border border-[#b91c1c] bg-[#e6252f] px-4 py-2 text-xs font-extrabold tracking-wide text-white shadow-sm transition hover:bg-[#991b1b] sm:mb-0"
-          >
-            E-STOP
-          </button>
           <button
             type="button"
             onClick={() => router.push("/notifications")}

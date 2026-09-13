@@ -57,7 +57,7 @@ export default function DashboardTopNav() {
               })}
             </div>
           </div>
-          {/* Status, E-STOP, Notifications, User */}
+          {/* Status, Notifications, User */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
             <span className="flex items-center gap-1.5 rounded-full border border-[#d1fae5] bg-[#f0fdf4] px-3 py-1 text-[12px] font-semibold text-[#166534] min-w-0 mb-2 sm:mb-0">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -69,12 +69,6 @@ export default function DashboardTopNav() {
               Wi-Fi | Supabase Realtime
               <span className="ml-1 h-2 w-2 rounded-full bg-[#16a34a]" />
             </span>
-            <button
-              type="button"
-              className="rounded-lg border border-[#b91c1c] bg-[#e6252f] px-4 py-2 text-xs font-extrabold tracking-wide text-white shadow-sm transition hover:bg-[#991b1b] min-w-22.5 mb-2 sm:mb-0"
-            >
-              E-STOP
-            </button>
             <button
               type="button"
               onClick={() => router.push('/notifications')}

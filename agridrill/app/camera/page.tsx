@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import DashboardTopNav from "../../components/DashboardTopNav";
+import { TopNavbar } from "@/components/dashboard/TopNavbar";
 
 type CapturedPhoto = {
   id: string;
@@ -105,7 +105,7 @@ export default function CameraPage() {
 
   return (
     <>
-      <DashboardTopNav />
+      <TopNavbar pageReady />
       <main className="min-h-screen bg-[#030712] px-4 pb-10 pt-6 text-white md:px-8">
         <div className="mx-auto max-w-7xl">
           {/* ── TOP GRID: LIVE FEED + CAMERA PANEL ── */}
