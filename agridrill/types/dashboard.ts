@@ -7,10 +7,7 @@ import { type IconType } from "react-icons";
  */
 export interface MachineTelemetry {
   readonly ir1: boolean;
-  readonly ir2: boolean;
-  readonly ir3: boolean;
   readonly ir4: boolean;
-  readonly battery_percent: number;
   readonly seed_count: number;
   readonly hole_count: number;
   readonly drive_speed: number;
@@ -34,10 +31,7 @@ export interface MachineConnection {
 
 export interface ActivityRecord {
   readonly time: string;
-  readonly battery_percent: number;
   readonly ir1: boolean;
-  readonly ir2: boolean;
-  readonly ir3: boolean;
   readonly ir4: boolean;
   readonly seed_count: number;
   readonly hole_count: number;
@@ -84,7 +78,7 @@ export interface OperationStat {
 export interface SensorStatus {
   readonly index: number;
   readonly label: string;
-  readonly telemetryKey: keyof Pick<MachineTelemetry, "ir1" | "ir2" | "ir3" | "ir4">;
+  readonly telemetryKey: keyof Pick<MachineTelemetry, "ir1" | "ir4">;
   readonly value: boolean;
 }
 
