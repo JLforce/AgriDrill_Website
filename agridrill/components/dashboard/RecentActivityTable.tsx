@@ -20,7 +20,7 @@ function StatusBadge({ value }: { value: boolean }) {
   );
 }
 
-const COLUMN_HEADERS = ["Time", "Battery", "IR1", "IR2", "IR3", "IR4", "Seeds", "Holes", "Speed"];
+const COLUMN_HEADERS = ["Time", "IR1", "IR4", "Seeds", "Holes", "Speed"];
 
 function TableSkeleton() {
   return (
@@ -34,7 +34,7 @@ function TableSkeleton() {
 
 export function RecentActivityTable({ activity, isLoading }: RecentActivityTableProps) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
+    <section className="dashboard-card rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
       <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Recent Activity</h2>
@@ -66,15 +66,8 @@ export function RecentActivityTable({ activity, isLoading }: RecentActivityTable
                   }`}
                 >
                   <td className="rounded-l-2xl px-3 py-3 font-semibold text-slate-900">{row.time}</td>
-                  <td className="px-3 py-3 tabular-nums">{row.battery_percent}%</td>
                   <td className="px-3 py-3">
                     <StatusBadge value={row.ir1} />
-                  </td>
-                  <td className="px-3 py-3">
-                    <StatusBadge value={row.ir2} />
-                  </td>
-                  <td className="px-3 py-3">
-                    <StatusBadge value={row.ir3} />
                   </td>
                   <td className="px-3 py-3">
                     <StatusBadge value={row.ir4} />

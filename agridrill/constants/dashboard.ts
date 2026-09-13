@@ -18,10 +18,8 @@ export const DELAYED_THRESHOLD_SECONDS = 30;
 /** Max drive speed value used to compute the drive speed progress bar. */
 export const MAX_DRIVE_SPEED = 255;
 
-/** Sensor metadata — index/label/telemetry key stay in sync with MachineTelemetry's ir1-ir4 fields. */
+/** Sensor metadata — index/label/telemetry key stay in sync with the active MachineTelemetry IR fields. */
 export const SENSOR_DEFINITIONS: readonly Omit<SensorStatus, "value">[] = [
   { index: 1, label: "IR Sensor 1", telemetryKey: "ir1" },
-  { index: 2, label: "IR Sensor 2", telemetryKey: "ir2" },
-  { index: 3, label: "IR Sensor 3", telemetryKey: "ir3" },
   { index: 4, label: "IR Sensor 4", telemetryKey: "ir4" },
 ];

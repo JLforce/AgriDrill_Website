@@ -21,10 +21,7 @@ export interface UseTelemetryResult {
 function rowToTelemetry(row: TelemetryRow): MachineTelemetry {
   return {
     ir1: row.ir1,
-    ir2: row.ir2,
-    ir3: row.ir3,
     ir4: row.ir4,
-    battery_percent: row.battery_percent,
     seed_count: row.seed_count,
     hole_count: row.hole_count,
     drive_speed: row.drive_speed,
@@ -34,10 +31,7 @@ function rowToTelemetry(row: TelemetryRow): MachineTelemetry {
 function rowToActivity(row: TelemetryRow): ActivityRecord {
   return {
     time: formatClockTime(row.created_at),
-    battery_percent: row.battery_percent,
     ir1: row.ir1,
-    ir2: row.ir2,
-    ir3: row.ir3,
     ir4: row.ir4,
     seed_count: row.seed_count,
     hole_count: row.hole_count,

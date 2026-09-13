@@ -1,6 +1,6 @@
 "use client";
 
-import { FiBattery, FiCpu, FiLayers, FiTarget } from "react-icons/fi";
+import { FiCpu, FiLayers, FiTarget } from "react-icons/fi";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { type ConnectionState, type MachineTelemetry, type MetricCardData } from "@/types/dashboard";
 
@@ -22,16 +22,6 @@ function buildMetricCards(telemetry: MachineTelemetry, connectionState: Connecti
       tone: isOnline ? "success" : "danger",
     },
     {
-      title: "Battery",
-      value: `${telemetry.battery_percent}%`,
-      numericValue: telemetry.battery_percent,
-      suffix: "%",
-      note: telemetry.battery_percent >= 80 ? "Good" : telemetry.battery_percent >= 50 ? "Moderate" : "Low",
-      icon: FiBattery,
-      tone: telemetry.battery_percent >= 50 ? "success" : "warning",
-      progress: telemetry.battery_percent,
-    },
-    {
       title: "Seeds Planted",
       value: telemetry.seed_count.toString(),
       numericValue: telemetry.seed_count,
@@ -50,12 +40,12 @@ function buildMetricCards(telemetry: MachineTelemetry, connectionState: Connecti
   ];
 }
 
-const SKELETON_KEYS = ["status", "battery", "seeds", "holes"];
+const SKELETON_KEYS = ["status", "seeds", "holes"];
 
 export function MetricsGrid({ telemetry, connectionState, isLoading }: MetricsGridProps) {
   if (isLoading || !telemetry) {
     return (
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {SKELETON_KEYS.map((key) => (
           <MetricCard
             key={key}
@@ -70,7 +60,7 @@ export function MetricsGrid({ telemetry, connectionState, isLoading }: MetricsGr
   const cards = buildMetricCards(telemetry, connectionState);
 
   return (
-    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {cards.map((card) => (
         <MetricCard key={card.title} card={card} />
       ))}

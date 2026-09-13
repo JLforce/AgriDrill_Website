@@ -34,7 +34,7 @@ export function DashboardHeader({ lastSeenIso }: DashboardHeaderProps) {
   const status = getConnectionStatus(lastSeenIso);
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
+    <section className="dashboard-card rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
           <p className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-700">

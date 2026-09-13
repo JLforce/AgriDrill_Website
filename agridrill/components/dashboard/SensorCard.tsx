@@ -14,7 +14,7 @@ function SensorCardBase({ sensor, lastUpdatedIso }: SensorCardProps) {
   const detected = sensor.value;
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-slate-300">
+    <article className="dashboard-card rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:border-slate-300">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-slate-900">

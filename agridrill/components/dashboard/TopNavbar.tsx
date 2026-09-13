@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { FiLogOut, FiUser } from "react-icons/fi";
 import { topNavLinks, topNavRoutes } from "@/constants/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -22,6 +23,7 @@ export function TopNavbar({ pageReady }: TopNavbarProps) {
 
   const [initials, setInitials] = useState("?");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -50,6 +52,13 @@ export function TopNavbar({ pageReady }: TopNavbarProps) {
 
     loadUser();
   }, []);
+
+  const handleSignOut = async () => {
+    const supabase = getSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    setIsProfileMenuOpen(false);
+    router.replace("/landing");
+  };
 
   return (
     <nav
@@ -113,12 +122,6 @@ export function TopNavbar({ pageReady }: TopNavbarProps) {
           </span>
           <button
             type="button"
-            className="mb-2 min-w-22.5 rounded-lg border border-[#b91c1c] bg-[#e6252f] px-4 py-2 text-xs font-extrabold tracking-wide text-white shadow-sm transition hover:bg-[#991b1b] sm:mb-0"
-          >
-            E-STOP
-          </button>
-          <button
-            type="button"
             onClick={() => router.push("/notifications")}
             className="relative flex min-h-10 min-w-10 items-center justify-center rounded-full border border-[#e5e7eb] bg-white text-[#64748b] shadow-md transition hover:bg-[#f3f4f6] hover:text-[#334155]"
             style={{ width: 44, height: 44, minWidth: 40, minHeight: 40 }}
@@ -130,26 +133,57 @@ export function TopNavbar({ pageReady }: TopNavbarProps) {
             </svg>
             <span className="absolute -right-1.5 -top-1.5 h-4 w-4 rounded-full border-2 border-white bg-[#e6252f] shadow-md" />
           </button>
-          <button
-            type="button"
-            onClick={() => router.push("/profile")}
-            className="flex items-center justify-center overflow-hidden rounded-full border border-[#e5e7eb] bg-white text-base font-semibold text-[#334155] shadow transition hover:bg-[#f3f4f6] focus:outline-none focus:ring-2 focus:ring-blue-200"
-            style={{ width: 44, height: 44, minWidth: 44, minHeight: 44 }}
-            aria-label="Profile"
-          >
-            {avatarUrl ? (
-              <Image
-                src={avatarUrl}
-                alt="Profile"
-                width={44}
-                height={44}
-                unoptimized
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              initials
-            )}
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsProfileMenuOpen((open) => !open)}
+              className="flex items-center justify-center overflow-hidden rounded-full border border-[#e5e7eb] bg-white text-base font-semibold text-[#334155] shadow transition hover:bg-[#f3f4f6] focus:outline-none focus:ring-2 focus:ring-blue-200"
+              style={{ width: 44, height: 44, minWidth: 44, minHeight: 44 }}
+              aria-label="Open profile menu"
+              aria-expanded={isProfileMenuOpen}
+              aria-haspopup="menu"
+            >
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt="Profile"
+                  width={44}
+                  height={44}
+                  unoptimized
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                initials
+              )}
+            </button>
+
+            {isProfileMenuOpen ? (
+              <div className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-52 rounded-2xl border border-[#e5e7eb] bg-white p-2 shadow-xl" role="menu">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileMenuOpen(false);
+                    router.push("/profile");
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[#334155] transition hover:bg-[#f3f4f6]"
+                  role="menuitem"
+                >
+                  <FiUser className="h-4 w-4 text-[#64748b]" aria-hidden="true" />
+                  Profile
+                </button>
+                <div className="my-2 border-t border-[#e5e7eb]" />
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[#b91c1c] transition hover:bg-[#fef2f2]"
+                  role="menuitem"
+                >
+                  <FiLogOut className="h-4 w-4" aria-hidden="true" />
+                  Log out
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </nav>

@@ -51,7 +51,7 @@ export function RobotControl({ loadingCommand, activeCommand, onSendCommand }: R
   }, [isBusy, onSendCommand]);
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
+    <div className="dashboard-card rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Robot Control</h2>

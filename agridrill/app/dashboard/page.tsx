@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { primaryNav } from "@/constants/navigation";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import { EmergencyStop } from "@/components/dashboard/EmergencyStop";
 import { Footer } from "@/components/dashboard/Footer";
 import { MetricsGrid } from "@/components/dashboard/MetricsGrid";
 import { OperationStatistics } from "@/components/dashboard/OperationStatistics";
@@ -33,12 +32,11 @@ function DashboardContent() {
       <section className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
         <div className="space-y-4">
           <RobotControl loadingCommand={loadingCommand} activeCommand={activeCommand} onSendCommand={sendCommand} />
-          <SensorGrid telemetry={telemetry} lastUpdatedIso={lastSeenIso} hasTelemetry={hasTelemetry} />
         </div>
 
         <aside className="space-y-4">
-          <EmergencyStop isSending={loadingCommand !== null} onSendCommand={sendCommand} />
           <OperationStatistics telemetry={telemetry} isLoading={isLoading} />
+          <SensorGrid telemetry={telemetry} lastUpdatedIso={lastSeenIso} hasTelemetry={hasTelemetry} />
         </aside>
       </section>
 

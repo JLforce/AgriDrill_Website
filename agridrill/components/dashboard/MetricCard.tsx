@@ -44,7 +44,7 @@ function MetricCardBase({ card, isLoading }: MetricCardProps) {
     card.numericValue !== undefined ? `${Math.round(animatedValue)}${card.suffix ?? ""}` : card.value;
 
   return (
-    <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <article className="dashboard-card rounded-3xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{card.title}</p>
