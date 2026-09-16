@@ -54,6 +54,8 @@ const mqttClient = mqtt.connect(`mqtts://${HIVEMQ_HOST}:${HIVEMQ_PORT}`, {
 // ============================================================
 
 const TELEMETRY_TOPIC = "agridrill/status";
+const DUPLICATE_EVENT_WINDOW_MS = 5000;
+let lastObstacleNotificationAt = 0;
 
 // ============================================================
 // MQTT CONNECT
@@ -85,6 +87,29 @@ mqttClient.on("message", async (topic, message) => {
   const payload = message.toString().trim();
 
   console.log("MQTT message received:", payload);
+
+  if (payload === "Obstacle Detected") {
+    const now = Date.now();
+    if (now - lastObstacleNotificationAt < DUPLICATE_EVENT_WINDOW_MS) {
+      console.log("Duplicate obstacle event ignored.");
+      return;
+    }
+
+    const { error } = await supabase.from("notifications").insert({
+      type: "obstacle_detected",
+      message: "An obstacle has been detected by the AgriDrill machine.",
+      is_read: false,
+    });
+
+    if (error) {
+      console.error("Supabase obstacle notification insert error:", error);
+      return;
+    }
+
+    lastObstacleNotificationAt = now;
+    console.log("Obstacle notification saved to Supabase.");
+    return;
+  }
 
   // ----------------------------------------------------------
   // Parse current ESP32 telemetry format:
