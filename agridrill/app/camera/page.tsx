@@ -138,6 +138,7 @@ export default function CameraPage() {
                 <img
                   ref={videoRef}
                   src={cameraInfo.streamUrl}
+                  crossOrigin="anonymous"
                   alt="Live camera feed"
                   className="h-full w-full object-cover"
                   onError={() => console.warn("Camera feed unavailable")}
