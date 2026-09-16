@@ -64,7 +64,7 @@ export function SensorActivityChart({ rows, ir1ActivePercent, ir4ActivePercent }
               <Tooltip
                 contentStyle={{ borderRadius: 12, borderColor: "#e2e8f0", fontSize: 12 }}
                 labelStyle={{ fontWeight: 600, color: "#0f172a" }}
-                formatter={(value: number) => (value === 1 ? "ON" : "OFF")}
+                formatter={(value) => (value === 1 ? "ON" : "OFF")}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Line type="stepAfter" dataKey="ir1" name="IR1" stroke="#0ea5e9" strokeWidth={2} dot={false} />

@@ -44,7 +44,7 @@ export function DriveSpeedChart({ rows }: DriveSpeedChartProps) {
               <Tooltip
                 contentStyle={{ borderRadius: 12, borderColor: "#e2e8f0", fontSize: 12 }}
                 labelStyle={{ fontWeight: 600, color: "#0f172a" }}
-                formatter={(value: number) => [value, "Drive Value"]}
+                formatter={(value) => [value ?? 0, "Drive Value"]}
               />
               <Line type="monotone" dataKey="drive_speed" name="Drive Value" stroke="#f59e0b" strokeWidth={2} dot={false} />
             </LineChart>
