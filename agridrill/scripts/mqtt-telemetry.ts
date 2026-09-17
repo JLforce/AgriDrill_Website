@@ -54,8 +54,7 @@ const mqttClient = mqtt.connect(`mqtts://${HIVEMQ_HOST}:${HIVEMQ_PORT}`, {
 // ============================================================
 
 const TELEMETRY_TOPIC = "agridrill/status";
-const DUPLICATE_EVENT_WINDOW_MS = 5000;
-let lastObstacleNotificationAt = 0;
+let obstacleActive = false;
 
 // ============================================================
 // MQTT CONNECT
@@ -89,27 +88,45 @@ mqttClient.on("message", async (topic, message) => {
   console.log("MQTT message received:", payload);
 
   if (payload === "Obstacle Detected") {
-    const now = Date.now();
-    if (now - lastObstacleNotificationAt < DUPLICATE_EVENT_WINDOW_MS) {
-      console.log("Duplicate obstacle event ignored.");
-      return;
-    }
-
-    const { error } = await supabase.from("notifications").insert({
-      type: "obstacle_detected",
-      message: "An obstacle has been detected by the AgriDrill machine.",
-      is_read: false,
-    });
-
-    if (error) {
-      console.error("Supabase obstacle notification insert error:", error);
-      return;
-    }
-
-    lastObstacleNotificationAt = now;
-    console.log("Obstacle notification saved to Supabase.");
+  if (obstacleActive) {
+    console.log("Obstacle already active. Duplicate ignored.");
     return;
   }
+
+  // Lock immediately so repeated MQTT messages
+  // cannot create multiple notifications.
+  obstacleActive = true;
+
+  const { error } = await supabase.from("notifications").insert({
+    type: "obstacle_detected",
+    message: "An obstacle has been detected by the AgriDrill machine.",
+    is_read: false,
+  });
+
+  if (error) {
+    console.error(
+      "Supabase obstacle notification insert error:",
+      error
+    );
+
+    // Allow another attempt if the database insert failed.
+    obstacleActive = false;
+    return;
+  }
+
+  console.log("Obstacle notification saved to Supabase.");
+  return;
+}
+
+if (payload === "Obstacle Cleared") {
+  obstacleActive = false;
+
+  console.log(
+    "Obstacle cleared. Ready for the next obstacle."
+  );
+
+  return;
+}
 
   // ----------------------------------------------------------
   // Parse current ESP32 telemetry format:
