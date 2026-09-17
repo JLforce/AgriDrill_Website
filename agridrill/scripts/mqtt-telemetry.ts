@@ -39,21 +39,60 @@ const supabase = createClient(
 );
 
 // ============================================================
+// MACHINE STATUS
+// ============================================================
+
+const MACHINE_STATUS_ID = 1;
+
+async function updateMachineStatus(
+  line1: string,
+  line2: string,
+  sourceMessage: string
+) {
+  const { error } = await supabase
+    .from("machine_status")
+    .update({
+      line1,
+      line2,
+      source_message: sourceMessage,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", MACHINE_STATUS_ID);
+
+  if (error) {
+    console.error(
+      "Supabase machine status update error:",
+      error
+    );
+
+    return;
+  }
+
+  console.log(
+    `Machine status updated: ${line1} / ${line2}`
+  );
+}
+
+// ============================================================
 // MQTT CLIENT
 // ============================================================
 
-const mqttClient = mqtt.connect(`mqtts://${HIVEMQ_HOST}:${HIVEMQ_PORT}`, {
-  username: HIVEMQ_USERNAME,
-  password: HIVEMQ_PASSWORD,
-  protocol: "mqtts",
-  rejectUnauthorized: true,
-});
+const mqttClient = mqtt.connect(
+  `mqtts://${HIVEMQ_HOST}:${HIVEMQ_PORT}`,
+  {
+    username: HIVEMQ_USERNAME,
+    password: HIVEMQ_PASSWORD,
+    protocol: "mqtts",
+    rejectUnauthorized: true,
+  }
+);
 
 // ============================================================
 // MQTT TOPIC
 // ============================================================
 
 const TELEMETRY_TOPIC = "agridrill/status";
+
 let obstacleActive = false;
 
 // ============================================================
@@ -65,7 +104,11 @@ mqttClient.on("connect", () => {
 
   mqttClient.subscribe(TELEMETRY_TOPIC, (error) => {
     if (error) {
-      console.error("Failed to subscribe to telemetry topic:", error);
+      console.error(
+        "Failed to subscribe to telemetry topic:",
+        error
+      );
+
       return;
     }
 
@@ -87,46 +130,214 @@ mqttClient.on("message", async (topic, message) => {
 
   console.log("MQTT message received:", payload);
 
-  if (payload === "Obstacle Detected") {
-  if (obstacleActive) {
-    console.log("Obstacle already active. Duplicate ignored.");
-    return;
-  }
+  // ==========================================================
+  // MACHINE LCD-STYLE STATUS
+  // ==========================================================
 
-  // Lock immediately so repeated MQTT messages
-  // cannot create multiple notifications.
-  obstacleActive = true;
-
-  const { error } = await supabase.from("notifications").insert({
-    type: "obstacle_detected",
-    message: "An obstacle has been detected by the AgriDrill machine.",
-    is_read: false,
-  });
-
-  if (error) {
-    console.error(
-      "Supabase obstacle notification insert error:",
-      error
+  if (payload === "MQTT CLOUD CONNECTED") {
+    await updateMachineStatus(
+      "MQTT",
+      "CONNECTED",
+      payload
     );
 
-    // Allow another attempt if the database insert failed.
-    obstacleActive = false;
     return;
   }
 
-  console.log("Obstacle notification saved to Supabase.");
-  return;
-}
+  if (payload === "AGRIDRILL START REQUEST RECEIVED") {
+    await updateMachineStatus(
+      "AGRI DRILL",
+      "START",
+      payload
+    );
 
-if (payload === "Obstacle Cleared") {
-  obstacleActive = false;
+    return;
+  }
 
-  console.log(
-    "Obstacle cleared. Ready for the next obstacle."
-  );
+  if (payload === "HOMING ACTUATOR") {
+    await updateMachineStatus(
+      "HOMING",
+      "RETRACTING...",
+      payload
+    );
 
-  return;
-}
+    return;
+  }
+
+  if (payload === "DRILL DOWN") {
+    await updateMachineStatus(
+      "DRILL",
+      "DOWN",
+      payload
+    );
+
+    return;
+  }
+
+  if (payload === "DRILL UP") {
+    await updateMachineStatus(
+      "DRILL",
+      "UP",
+      payload
+    );
+
+    return;
+  }
+
+  // ==========================================================
+  // OBSTACLE DETECTED
+  // ==========================================================
+
+  if (payload === "Obstacle Detected") {
+    if (obstacleActive) {
+      console.log(
+        "Obstacle already active. Duplicate ignored."
+      );
+
+      return;
+    }
+
+    // Lock immediately so repeated ESP32 messages
+    // cannot create duplicate notifications.
+    obstacleActive = true;
+
+    // Update the Web machine display.
+    await updateMachineStatus(
+      "OBSTACLE",
+      "WAITING",
+      payload
+    );
+
+    // Create the notification for the existing
+    // Next.js obstacle modal.
+    const { error } = await supabase
+      .from("notifications")
+      .insert({
+        type: "obstacle_detected",
+        message:
+          "An obstacle has been detected by the AgriDrill machine.",
+        is_read: false,
+      });
+
+    if (error) {
+      console.error(
+        "Supabase obstacle notification insert error:",
+        error
+      );
+
+      // Allow another obstacle event to be processed
+      // if the database insert failed.
+      obstacleActive = false;
+
+      return;
+    }
+
+    console.log(
+      "Obstacle notification saved to Supabase."
+    );
+
+    return;
+  }
+
+  // ==========================================================
+  // OBSTACLE CLEARED
+  // ==========================================================
+
+  if (payload === "Obstacle Cleared") {
+    obstacleActive = false;
+
+    await updateMachineStatus(
+      "PATH CLEAR",
+      "RESUMING",
+      payload
+    );
+
+    console.log(
+      "Obstacle cleared. Ready for the next obstacle."
+    );
+
+    return;
+  }
+
+  // ==========================================================
+  // OTHER MACHINE STATUS
+  // ==========================================================
+
+  if (
+    payload ===
+    "FORWARD REQUESTED: EXECUTING SWEEP FIRST"
+  ) {
+    await updateMachineStatus(
+      "STEER",
+      "SWEEPING...",
+      payload
+    );
+
+    return;
+  }
+
+  if (
+    payload ===
+    "SWEEP DONE: TRACKS ENGAGED FORWARD"
+  ) {
+    await updateMachineStatus(
+      "MOVE",
+      "FORWARD",
+      payload
+    );
+
+    return;
+  }
+
+  if (payload === "MOVING BACKWARD") {
+    await updateMachineStatus(
+      "BACKWARD",
+      "MOVING",
+      payload
+    );
+
+    return;
+  }
+
+  if (payload === "TURN LEFT") {
+    await updateMachineStatus(
+      "TURN",
+      "LEFT",
+      payload
+    );
+
+    return;
+  }
+
+  if (payload === "TURN RIGHT") {
+    await updateMachineStatus(
+      "TURN",
+      "RIGHT",
+      payload
+    );
+
+    return;
+  }
+
+  if (payload === "Seedling Empty") {
+    await updateMachineStatus(
+      "PROCESS",
+      "COMPLETE",
+      payload
+    );
+
+    return;
+  }
+
+  if (payload === "ALL STOPPED") {
+    await updateMachineStatus(
+      "SYSTEM",
+      "STOPPED",
+      payload
+    );
+
+    return;
+  }
 
   // ----------------------------------------------------------
   // Parse current ESP32 telemetry format:
@@ -136,9 +347,12 @@ if (payload === "Obstacle Cleared") {
 
   const ir1Match = payload.match(/IR1:(\d+)/);
   const ir4Match = payload.match(/IR4:(\d+)/);
-  const seedCountMatch = payload.match(/SeedCount:(\d+)/);
-  const holeCountMatch = payload.match(/HoleCount:(\d+)/);
-  const driveMatch = payload.match(/Drive:(\d+)/);
+  const seedCountMatch =
+    payload.match(/SeedCount:(\d+)/);
+  const holeCountMatch =
+    payload.match(/HoleCount:(\d+)/);
+  const driveMatch =
+    payload.match(/Drive:(\d+)/);
 
   // ----------------------------------------------------------
   // Ignore messages that are not telemetry
@@ -151,7 +365,10 @@ if (payload === "Obstacle Cleared") {
     !holeCountMatch ||
     !driveMatch
   ) {
-    console.log("Message is not a telemetry payload. Ignoring.");
+    console.log(
+      "Message is not a telemetry payload. Ignoring."
+    );
+
     return;
   }
 
@@ -189,7 +406,11 @@ if (payload === "Obstacle Cleared") {
     });
 
   if (error) {
-    console.error("Supabase telemetry insert error:", error);
+    console.error(
+      "Supabase telemetry insert error:",
+      error
+    );
+
     return;
   }
 
@@ -217,5 +438,7 @@ mqttClient.on("close", () => {
 // ============================================================
 
 mqttClient.on("reconnect", () => {
-  console.log("Attempting to reconnect to HiveMQ Cloud...");
+  console.log(
+    "Attempting to reconnect to HiveMQ Cloud..."
+  );
 });
