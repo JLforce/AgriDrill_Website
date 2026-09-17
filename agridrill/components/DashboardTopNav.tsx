@@ -77,7 +77,7 @@ export default function DashboardTopNav() {
             </button>
             <button
               type="button"
-              onClick={() => router.push('/notifications')}
+              onClick={() => router.push('/notification')}
               className="relative rounded-full border border-[#e5e7eb] bg-white text-[#64748b] shadow-md transition hover:bg-[#f3f4f6] hover:text-[#334155] flex items-center justify-center min-w-10 min-h-10"
               style={{ width: 44, height: 44, minWidth: 40, minHeight: 40 }}
               aria-label="Notifications"

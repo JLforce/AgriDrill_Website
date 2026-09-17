@@ -122,7 +122,7 @@ export function TopNavbar({ pageReady }: TopNavbarProps) {
           </span>
           <button
             type="button"
-            onClick={() => router.push("/notifications")}
+            onClick={() => router.push("/notification")}
             className="relative flex min-h-10 min-w-10 items-center justify-center rounded-full border border-[#e5e7eb] bg-white text-[#64748b] shadow-md transition hover:bg-[#f3f4f6] hover:text-[#334155]"
             style={{ width: 44, height: 44, minWidth: 40, minHeight: 40 }}
             aria-label="Notifications"

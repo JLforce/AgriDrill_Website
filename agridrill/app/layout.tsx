@@ -4,6 +4,7 @@ import "./globals.css";
 import { ToastProvider } from "@/hooks/useToast";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { ToastViewport } from "@/components/dashboard/ToastViewport";
+import NotificationProvider from "@/components/notifications/NotificationProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,8 +34,10 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
           <ToastProvider>
-            {children}
-            <ToastViewport />
+            <NotificationProvider>
+              {children}
+              <ToastViewport />
+            </NotificationProvider>
           </ToastProvider>
         </ThemeProvider>
       </body>

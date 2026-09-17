@@ -1,7 +1,7 @@
 import { type NavLinkItem } from "@/types/dashboard";
 
 export const primaryNav: readonly NavLinkItem[] = [
-  { label: "Field Analytics", route: "/magazine" },
+  { label: "Field Analytics", route: "/field-analytics" },
   { label: "Session History", route: "/history" },
 ];
 
