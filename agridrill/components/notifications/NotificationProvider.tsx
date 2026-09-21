@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import ObstacleNotificationModal from "./ObstacleNotificationModal";
+import SeedlingEmptyModal from "./SeedlingEmptyModal";
 import { useNotifications } from "@/hooks/useNotifications";
 
 interface NotificationProviderProps {
@@ -17,13 +18,24 @@ export default function NotificationProvider({
     dismissNotification,
   } = useNotifications();
 
+  const isObstacleNotification =
+    activeNotification?.type === "obstacle_detected";
+
+  const isSeedlingEmptyNotification =
+    activeNotification?.type === "seedling_empty";
+
   return (
     <>
       {children}
 
       <ObstacleNotificationModal
-        open={activeNotification !== null}
+        open={isObstacleNotification}
         onDismiss={dismissNotification}
+      />
+
+      <SeedlingEmptyModal
+        open={isSeedlingEmptyNotification}
+        onClose={dismissNotification}
       />
     </>
   );
