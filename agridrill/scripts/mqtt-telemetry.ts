@@ -319,15 +319,41 @@ mqttClient.on("message", async (topic, message) => {
     return;
   }
 
-  if (payload === "Seedling Empty") {
-    await updateMachineStatus(
-      "PROCESS",
-      "COMPLETE",
-      payload
-    );
+  // ==========================================================
+  // SEEDLING EMPTY
+  // ==========================================================
 
-    return;
+  if (payload === "Seedling Empty") {
+  // Update the Web machine display.
+  await updateMachineStatus(
+    "PROCESS",
+    "COMPLETE",
+    payload
+  );
+
+  // Create the seedling-empty notification.
+  const { error } = await supabase
+    .from("notifications")
+    .insert({
+      type: "seedling_empty",
+      message:
+        "No seedling detected on the conveyor. Please refill the seedling supply.",
+      is_read: false,
+    });
+
+  if (error) {
+    console.error(
+      "Supabase seedling-empty notification insert error:",
+      error
+    );
+  } else {
+    console.log(
+      "Seedling-empty notification saved to Supabase."
+    );
   }
+
+  return;
+}
 
   if (payload === "ALL STOPPED") {
     await updateMachineStatus(

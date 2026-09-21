@@ -66,9 +66,12 @@ export function useNotifications() {
             ...current,
           ]);
 
-          if (notification.type === "obstacle_detected") {
+          if (
+            notification.type === "obstacle_detected" ||
+            notification.type === "seedling_empty"
+          ) {
             setActiveNotification(notification);
-          }
+        }
         }
       )
       .subscribe((status) => {
