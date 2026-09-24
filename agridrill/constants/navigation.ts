@@ -1,8 +1,9 @@
 import { type NavLinkItem } from "@/types/dashboard";
 
-export const primaryNav: readonly NavLinkItem[] = [
+export const primaryNav = [
   { label: "Field Analytics", route: "/field-analytics" },
   { label: "Operation History", route: "/operation-history" },
+  { label: "Command History", route: "/command-history" },
 ];
 
 export const secondaryNav: readonly NavLinkItem[] = [

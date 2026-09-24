@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { useRouter } from "next/navigation";
 import { TopNavbar } from "@/components/dashboard/TopNavbar";
 
 type CapturedPhoto = {
@@ -9,12 +15,43 @@ type CapturedPhoto = {
   timestamp: string;
 };
 
+function BackToDashboardButton() {
+  const router = useRouter();
+
+  return (
+    <button
+      type="button"
+      onClick={() => router.push("/dashboard")}
+      className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-200 shadow-sm transition hover:border-emerald-500 hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-[#030712]"
+    >
+      <svg
+        className="h-4 w-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M15 18l-6-6 6-6"
+        />
+      </svg>
+
+      Back to Dashboard
+    </button>
+  );
+}
+
 export default function CameraPage() {
   const videoRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [fps, setFps] = useState(29.8);
-  const [capturedPhotos, setCapturedPhotos] = useState<CapturedPhoto[]>([]);
+  const [capturedPhotos, setCapturedPhotos] = useState<
+    CapturedPhoto[]
+  >([]);
 
   // Static camera info — swap for live values from the ESP32/Pi endpoint when available.
   const cameraInfo = {
@@ -41,16 +78,27 @@ export default function CameraPage() {
   const handleSnapshot = useCallback(() => {
     const canvas = canvasRef.current;
     const img = videoRef.current;
+
     if (!canvas || !img) return;
+
     const ctx = canvas.getContext("2d");
+
     if (!ctx) return;
 
     canvas.width = img.naturalWidth || 1280;
     canvas.height = img.naturalHeight || 720;
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    ctx.drawImage(
+      img,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
 
     canvas.toBlob((blob) => {
       if (!blob) return;
+
       const url = URL.createObjectURL(blob);
       const now = new Date();
 
@@ -67,7 +115,10 @@ export default function CameraPage() {
 
   const handleClearAll = useCallback(() => {
     setCapturedPhotos((prev) => {
-      prev.forEach((photo) => URL.revokeObjectURL(photo.url));
+      prev.forEach((photo) =>
+        URL.revokeObjectURL(photo.url)
+      );
+
       return [];
     });
   }, []);
@@ -82,23 +133,39 @@ export default function CameraPage() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target && ["INPUT", "TEXTAREA"].includes(target.tagName)) return;
+
+      if (
+        target &&
+        ["INPUT", "TEXTAREA"].includes(target.tagName)
+      ) {
+        return;
+      }
 
       if (e.key.toLowerCase() === "c") {
         handleSnapshot();
-      } else if (e.key.toLowerCase() === "q" || e.key === "Escape") {
+      } else if (
+        e.key.toLowerCase() === "q" ||
+        e.key === "Escape"
+      ) {
         handleQuit();
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+
+    return () =>
+      window.removeEventListener(
+        "keydown",
+        onKeyDown
+      );
   }, [handleSnapshot, handleQuit]);
 
   // Cleanup blob URLs on unmount
   useEffect(() => {
     return () => {
-      capturedPhotos.forEach((photo) => URL.revokeObjectURL(photo.url));
+      capturedPhotos.forEach((photo) =>
+        URL.revokeObjectURL(photo.url)
+      );
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -106,8 +173,14 @@ export default function CameraPage() {
   return (
     <>
       <TopNavbar pageReady />
+
       <main className="min-h-screen bg-[#030712] px-4 pb-10 pt-6 text-white md:px-8">
         <div className="mx-auto max-w-7xl">
+          {/* Back button */}
+          <div className="mb-6">
+            <BackToDashboardButton />
+          </div>
+
           {/* ── TOP GRID: LIVE FEED + CAMERA PANEL ── */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             {/* Live feed card */}
@@ -117,11 +190,15 @@ export default function CameraPage() {
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111827] text-lg">
                     📷
                   </span>
+
                   <div>
                     <h2 className="text-base font-bold uppercase tracking-wide text-white">
                       {cameraInfo.name}
                     </h2>
-                    <p className="text-xs text-[#94a3b8]">{cameraInfo.model}</p>
+
+                    <p className="text-xs text-[#94a3b8]">
+                      {cameraInfo.model}
+                    </p>
                   </div>
                 </div>
 
@@ -130,7 +207,10 @@ export default function CameraPage() {
                     <span className="h-2 w-2 rounded-full bg-[#22c55e] shadow-[0_0_8px_rgba(34,197,94,0.7)]" />
                     Live
                   </span>
-                  <span className="text-xs text-[#94a3b8]">FPS: {fps.toFixed(1)}</span>
+
+                  <span className="text-xs text-[#94a3b8]">
+                    FPS: {fps.toFixed(1)}
+                  </span>
                 </div>
               </div>
 
@@ -140,11 +220,18 @@ export default function CameraPage() {
                   src={cameraInfo.streamUrl}
                   alt="Live camera feed"
                   className="h-full w-full object-cover"
-                  onError={() => console.warn("Camera feed unavailable")}
+                  onError={() =>
+                    console.warn(
+                      "Camera feed unavailable"
+                    )
+                  }
                 />
               </div>
 
-              <canvas ref={canvasRef} className="hidden" />
+              <canvas
+                ref={canvasRef}
+                className="hidden"
+              />
             </div>
 
             {/* Right column: camera card + controls */}
@@ -156,13 +243,19 @@ export default function CameraPage() {
                     <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#166534] bg-[#052e16] text-lg">
                       📷
                     </span>
+
                     <div>
-                      <p className="text-sm font-bold text-white">Camera 1</p>
+                      <p className="text-sm font-bold text-white">
+                        Camera 1
+                      </p>
+
                       <p className="text-xs text-[#86efac]/80">
-                        {cameraInfo.name} ({cameraInfo.shortModel})
+                        {cameraInfo.name} (
+                        {cameraInfo.shortModel})
                       </p>
                     </div>
                   </div>
+
                   <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#4ade80]">
                     <span className="h-2 w-2 rounded-full bg-[#22c55e] shadow-[0_0_8px_rgba(34,197,94,0.7)]" />
                     Live
@@ -170,9 +263,23 @@ export default function CameraPage() {
                 </div>
 
                 <div className="mt-4 grid grid-cols-3 gap-2">
-                  <StatBox label="Resolution" value={cameraInfo.resolution} icon="📐" />
-                  <StatBox label="FPS" value={fps.toFixed(1)} icon="⏱️" />
-                  <StatBox label="Camera" value={cameraInfo.shortModel} icon="🔧" />
+                  <StatBox
+                    label="Resolution"
+                    value={cameraInfo.resolution}
+                    icon="📐"
+                  />
+
+                  <StatBox
+                    label="FPS"
+                    value={fps.toFixed(1)}
+                    icon="⏱️"
+                  />
+
+                  <StatBox
+                    label="Camera"
+                    value={cameraInfo.shortModel}
+                    icon="🔧"
+                  />
                 </div>
 
                 <button
@@ -190,10 +297,22 @@ export default function CameraPage() {
                 <p className="mb-3 text-sm font-bold uppercase tracking-wide text-white">
                   Controls
                 </p>
+
                 <div className="flex flex-wrap gap-4">
-                  <KeyHint keyLabel="C" description="Capture Photo" />
-                  <KeyHint keyLabel="Q" description="Quit" />
-                  <KeyHint keyLabel="ESC" description="Quit" />
+                  <KeyHint
+                    keyLabel="C"
+                    description="Capture Photo"
+                  />
+
+                  <KeyHint
+                    keyLabel="Q"
+                    description="Quit"
+                  />
+
+                  <KeyHint
+                    keyLabel="ESC"
+                    description="Quit"
+                  />
                 </div>
               </div>
             </div>
@@ -203,15 +322,21 @@ export default function CameraPage() {
           <div className="mt-4 rounded-2xl border border-[#1f2937] bg-[#0b1220] p-4">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-lg">🖼️</span>
+                <span className="text-lg">
+                  🖼️
+                </span>
+
                 <h3 className="text-sm font-bold uppercase tracking-wide text-white">
                   Captured Photos
                 </h3>
               </div>
+
               <button
                 type="button"
                 onClick={handleClearAll}
-                disabled={capturedPhotos.length === 0}
+                disabled={
+                  capturedPhotos.length === 0
+                }
                 className="flex items-center gap-1.5 rounded-lg border border-[#334155] bg-[#111827] px-3 py-1.5 text-xs font-semibold text-[#cbd5e1] transition hover:border-[#f87171] hover:text-[#f87171] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 🗑️ Clear All
@@ -221,8 +346,10 @@ export default function CameraPage() {
             {capturedPhotos.length === 0 ? (
               <p className="py-6 text-center text-xs text-[#64748b]">
                 No photos captured yet. Press{" "}
-                <span className="font-semibold text-[#cbd5e1]">C</span> or the
-                Capture Photo button.
+                <span className="font-semibold text-[#cbd5e1]">
+                  C
+                </span>{" "}
+                or the Capture Photo button.
               </p>
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -236,8 +363,12 @@ export default function CameraPage() {
                       alt={`Captured ${photo.timestamp}`}
                       className="aspect-video w-full object-cover"
                     />
+
                     <div className="flex items-center gap-1.5 bg-[#0b1220] px-2 py-1.5">
-                      <span className="text-xs">📷</span>
+                      <span className="text-xs">
+                        📷
+                      </span>
+
                       <span className="text-[11px] text-[#94a3b8]">
                         {photo.timestamp}
                       </span>
@@ -265,10 +396,14 @@ function StatBox({
   return (
     <div className="rounded-lg border border-[#166534]/60 bg-[#031f0d] px-2 py-2">
       <p className="text-sm">{icon}</p>
+
       <p className="mt-1 text-[10px] uppercase tracking-wide text-[#86efac]/70">
         {label}
       </p>
-      <p className="text-xs font-semibold text-white">{value}</p>
+
+      <p className="text-xs font-semibold text-white">
+        {value}
+      </p>
     </div>
   );
 }
@@ -285,7 +420,10 @@ function KeyHint({
       <span className="flex h-7 min-w-7 items-center justify-center rounded-md border border-[#334155] bg-[#111827] px-2 text-xs font-bold text-[#cbd5e1]">
         {keyLabel}
       </span>
-      <span className="text-xs text-[#94a3b8]">{description}</span>
+
+      <span className="text-xs text-[#94a3b8]">
+        {description}
+      </span>
     </div>
   );
 }
