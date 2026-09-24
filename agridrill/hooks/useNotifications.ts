@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Notification } from "@/types/notification";
 
+const NOTIFICATIONS_CHANNEL = "notifications-realtime";
+
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeNotification, setActiveNotification] =
@@ -16,6 +18,7 @@ export function useNotifications() {
     const supabase = getSupabaseBrowserClient();
 
     let mounted = true;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
     const loadNotifications = async () => {
       setIsLoading(true);
@@ -47,43 +50,82 @@ export function useNotifications() {
       }
     };
 
-    loadNotifications();
-
-    const channel = supabase
-      .channel("notifications-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-        },
-        (payload) => {
-          const notification = payload.new as Notification;
-
-          setNotifications((current) => [
-            notification,
-            ...current,
-          ]);
-
-          if (
-            notification.type === "obstacle_detected" ||
-            notification.type === "seedling_empty"
-          ) {
-            setActiveNotification(notification);
-        }
-        }
-      )
-      .subscribe((status) => {
-        console.log(
-          "Notification Realtime status:",
-          status
+    const setupRealtime = async () => {
+      /*
+       * Supabase reuses an existing channel when the same topic
+       * already exists on the client. Remove a stale existing
+       * notifications channel before creating a fresh one.
+       */
+      const existingChannel = supabase
+        .getChannels()
+        .find(
+          (currentChannel) =>
+            currentChannel.topic ===
+            `realtime:${NOTIFICATIONS_CHANNEL}`
         );
-      });
+
+      if (existingChannel) {
+        await supabase.removeChannel(existingChannel);
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      channel = supabase
+        .channel(NOTIFICATIONS_CHANNEL)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+          },
+          (payload) => {
+            if (!mounted) {
+              return;
+            }
+
+            const notification = payload.new as Notification;
+
+            setNotifications((current) => [
+              notification,
+              ...current,
+            ]);
+
+            if (
+              notification.type === "obstacle_detected" ||
+              notification.type === "seedling_empty"
+            ) {
+              setActiveNotification(notification);
+            }
+          }
+        )
+        .subscribe((status, realtimeError) => {
+          console.log(
+            "Notification Realtime status:",
+            status
+          );
+
+          if (realtimeError) {
+            console.error(
+              "Notification Realtime error:",
+              realtimeError
+            );
+          }
+        });
+    };
+
+    loadNotifications();
+    void setupRealtime();
 
     return () => {
       mounted = false;
-      supabase.removeChannel(channel);
+
+      if (channel) {
+        void supabase.removeChannel(channel);
+        channel = null;
+      }
     };
   }, []);
 

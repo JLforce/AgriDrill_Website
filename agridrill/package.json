@@ -10,6 +10,7 @@
     "mqtt:telemetry": "tsx scripts/mqtt-telemetry.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.23.0",
     "@hookform/resolvers": "^5.2.2",
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/ssr": "^0.10.3",

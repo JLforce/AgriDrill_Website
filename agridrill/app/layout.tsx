@@ -5,6 +5,7 @@ import { ToastProvider } from "@/hooks/useToast";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { ToastViewport } from "@/components/dashboard/ToastViewport";
 import NotificationProvider from "@/components/notifications/NotificationProvider";
+import AuthenticatedChatbot from "@/components/ai/AuthenticatedChatbot";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,6 +38,7 @@ export default function RootLayout({
             <NotificationProvider>
               {children}
               <ToastViewport />
+              <AuthenticatedChatbot />
             </NotificationProvider>
           </ToastProvider>
         </ThemeProvider>
