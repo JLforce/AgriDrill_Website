@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import mqtt from "mqtt";
 import { createClient } from "@supabase/supabase-js";
 
+import { getSupabaseServerClient } from "@/lib/supabase/server";
+
 const MQTT_HOST = process.env.HIVEMQ_HOST;
 const MQTT_PORT = Number(process.env.HIVEMQ_PORT || 8883);
 const MQTT_USERNAME = process.env.HIVEMQ_USERNAME;
@@ -14,7 +16,20 @@ const SUPABASE_SERVICE_ROLE_KEY =
 const MQTT_TOPIC = "agridrill/control";
 
 // Commands allowed by the AgriDrill ESP32 firmware
-const ALLOWED_COMMANDS = ["F", "B", "L", "R", "S", "D"];
+const ALLOWED_COMMANDS = ["F", "B", "L", "R", "S", "D"] as const;
+
+type AllowedCommand = (typeof ALLOWED_COMMANDS)[number];
+
+type CommandStatus = "sent" | "failed";
+
+const COMMAND_LABELS: Record<AllowedCommand, string> = {
+  D: "Start",
+  F: "Forward",
+  B: "Backward",
+  L: "Left",
+  R: "Right",
+  S: "Stop",
+};
 
 const supabase =
   SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
@@ -64,7 +79,6 @@ async function createOperationSession() {
     );
   }
 
-  // Prevent multiple running sessions from being created.
   const { data: existingSession, error: existingError } =
     await supabase
       .from("operation_sessions")
@@ -114,6 +128,31 @@ async function createOperationSession() {
   return data.id;
 }
 
+async function getRunningOperationSessionId() {
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("operation_sessions")
+    .select("id")
+    .eq("status", "running")
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      "Failed to find running operation session:",
+      error
+    );
+
+    return null;
+  }
+
+  return data?.id ?? null;
+}
+
 async function finishOperationSession() {
   if (!supabase) {
     throw new Error(
@@ -140,6 +179,7 @@ async function finishOperationSession() {
     console.log(
       "No running operation session found."
     );
+
     return null;
   }
 
@@ -168,11 +208,126 @@ async function finishOperationSession() {
   return activeSession.id;
 }
 
+async function getOperatorProfile(userId: string) {
+  if (!supabase) {
+    return {
+      name: null,
+      email: null,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("full_name, email")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      "Failed to load operator profile:",
+      error
+    );
+
+    return {
+      name: null,
+      email: null,
+    };
+  }
+
+  return {
+    name: data?.full_name?.trim() || null,
+    email: data?.email?.trim() || null,
+  };
+}
+
+async function createMachineCommandLog({
+  userId,
+  operatorName,
+  operatorEmail,
+  operationSessionId,
+  command,
+  status,
+}: {
+  userId: string;
+  operatorName: string | null;
+  operatorEmail: string | null;
+  operationSessionId: number | null;
+  command: AllowedCommand;
+  status: CommandStatus;
+}) {
+  if (!supabase) {
+    console.error(
+      "Unable to create machine command log: Supabase server configuration is missing"
+    );
+
+    return;
+  }
+
+  const commandLabel = COMMAND_LABELS[command];
+
+  const { error } = await supabase
+    .from("machine_command_logs")
+    .insert({
+      user_id: userId,
+      operator_name: operatorName,
+      operator_email: operatorEmail,
+      operation_session_id: operationSessionId,
+      command,
+      command_label: commandLabel,
+      status,
+    });
+
+  if (error) {
+    console.error(
+      "Failed to create machine command log:",
+      error
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   let client: mqtt.MqttClient | null = null;
 
+  let command = "";
+  let authenticatedUserId: string | null = null;
+  let operatorName: string | null = null;
+  let operatorEmail: string | null = null;
+
   try {
-    // Check MQTT environment variables
+    // ==========================================
+    // AUTHENTICATION
+    // ==========================================
+
+    const authSupabase = await getSupabaseServerClient();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await authSupabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Authentication required",
+        },
+        { status: 401 }
+      );
+    }
+
+    authenticatedUserId = user.id;
+
+    // Load the operator profile from the trusted
+    // server-side Supabase client.
+    const profile = await getOperatorProfile(user.id);
+
+    operatorName = profile.name ?? user.email ?? null;
+    operatorEmail = profile.email ?? user.email ?? null;
+
+    // ==========================================
+    // CHECK MQTT ENVIRONMENT VARIABLES
+    // ==========================================
+
     if (
       !MQTT_HOST ||
       !MQTT_USERNAME ||
@@ -192,15 +347,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Read JSON body
+    // ==========================================
+    // READ JSON BODY
+    // ==========================================
+
     const body = await request.json();
-    const command = String(
-      body.command || ""
-    )
+
+    command = String(body.command || "")
       .trim()
       .toUpperCase();
 
-    // Validate command
+    // ==========================================
+    // VALIDATE COMMAND
+    // ==========================================
+
     if (!command) {
       return NextResponse.json(
         {
@@ -211,7 +371,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!ALLOWED_COMMANDS.includes(command)) {
+    if (
+      !ALLOWED_COMMANDS.includes(
+        command as AllowedCommand
+      )
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -222,12 +386,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(
-      `Publishing command: ${command}`
-    );
-    console.log(`MQTT topic: ${MQTT_TOPIC}`);
+    const allowedCommand =
+      command as AllowedCommand;
 
-    // Connect to HiveMQ Cloud using secure MQTT (TLS)
+    console.log(
+      `Publishing command: ${allowedCommand}`
+    );
+
+    console.log(
+      `MQTT topic: ${MQTT_TOPIC}`
+    );
+
+    // ==========================================
+    // CONNECT TO HIVEMQ CLOUD
+    // ==========================================
+
     client = mqtt.connect(
       `mqtts://${MQTT_HOST}:${MQTT_PORT}`,
       {
@@ -239,7 +412,6 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Wait until MQTT connection is established
     await new Promise<void>(
       (resolve, reject) => {
         if (!client) {
@@ -248,6 +420,7 @@ export async function POST(request: NextRequest) {
               "MQTT client was not created"
             )
           );
+
           return;
         }
 
@@ -282,7 +455,10 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Publish command to ESP32 topic
+    // ==========================================
+    // PUBLISH COMMAND TO ESP32
+    // ==========================================
+
     await new Promise<void>(
       (resolve, reject) => {
         if (!client) {
@@ -291,12 +467,13 @@ export async function POST(request: NextRequest) {
               "MQTT client is not available"
             )
           );
+
           return;
         }
 
         client.publish(
           MQTT_TOPIC,
-          command,
+          allowedCommand,
           {
             qos: 0,
             retain: false,
@@ -308,7 +485,7 @@ export async function POST(request: NextRequest) {
             }
 
             console.log(
-              `Command published successfully: ${command} → ${MQTT_TOPIC}`
+              `Command published successfully: ${allowedCommand} → ${MQTT_TOPIC}`
             );
 
             resolve();
@@ -317,44 +494,64 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Close MQTT connection after publishing
     client.end();
 
     // ==========================================
     // OPERATION HISTORY INTEGRATION
     // ==========================================
 
-    if (command === "D") {
+    let operationSessionId: number | null = null;
+
+    if (allowedCommand === "D") {
       try {
-        await createOperationSession();
+        operationSessionId =
+          await createOperationSession();
       } catch (sessionError) {
         console.error(
           "Operation session start error:",
           sessionError
         );
-
-        // The machine command was already published
-        // successfully, so we do not fail the command.
       }
     }
 
-    if (command === "S") {
+    if (allowedCommand === "S") {
       try {
-        await finishOperationSession();
+        operationSessionId =
+          await finishOperationSession();
       } catch (sessionError) {
         console.error(
           "Operation session stop error:",
           sessionError
         );
-
-        // The machine STOP command was already
-        // published successfully.
       }
+    }
+
+    if (
+      allowedCommand !== "D" &&
+      allowedCommand !== "S"
+    ) {
+      operationSessionId =
+        await getRunningOperationSessionId();
+    }
+
+    // ==========================================
+    // MACHINE COMMAND ACTIVITY LOG
+    // ==========================================
+
+    if (authenticatedUserId) {
+      await createMachineCommandLog({
+        userId: authenticatedUserId,
+        operatorName,
+        operatorEmail,
+        operationSessionId,
+        command: allowedCommand,
+        status: "sent",
+      });
     }
 
     return NextResponse.json({
       success: true,
-      command,
+      command: allowedCommand,
       topic: MQTT_TOPIC,
       message:
         "Command published successfully",
@@ -365,9 +562,31 @@ export async function POST(request: NextRequest) {
       error
     );
 
-    // Safely close MQTT connection if an error occurs
     if (client) {
       client.end(true);
+    }
+
+    // ==========================================
+    // FAILED COMMAND ACTIVITY LOG
+    // ==========================================
+
+    if (
+      authenticatedUserId &&
+      ALLOWED_COMMANDS.includes(
+        command as AllowedCommand
+      )
+    ) {
+      const operationSessionId =
+        await getRunningOperationSessionId();
+
+      await createMachineCommandLog({
+        userId: authenticatedUserId,
+        operatorName,
+        operatorEmail,
+        operationSessionId,
+        command: command as AllowedCommand,
+        status: "failed",
+      });
     }
 
     return NextResponse.json(

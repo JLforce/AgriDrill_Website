@@ -2,6 +2,7 @@
 
 import { TopNavbar } from "@/components/dashboard/TopNavbar";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/useToast";
 import ProfileHeader from "@/components/profile/ProfileHeader";
@@ -20,6 +21,35 @@ type Profile = {
   avatar_url: string | null;
 };
 
+function BackToDashboardButton() {
+  const router = useRouter();
+
+  return (
+    <button
+      type="button"
+      onClick={() => router.push("/dashboard")}
+      className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-200 shadow-sm transition hover:border-emerald-500 hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-950"
+    >
+      <svg
+        className="h-4 w-4"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M15 18l-6-6 6-6"
+        />
+      </svg>
+
+      Back to Dashboard
+    </button>
+  );
+}
+
 export default function ProfilePage() {
   const [accountCreated, setAccountCreated] = useState<string | null>(null);
   const [lastLogin, setLastLogin] = useState<string | null>(null);
@@ -31,14 +61,12 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-
   const [draft, setDraft] = useState({
     full_name: "",
     phone: "",
     location: "",
   });
 
-  // New: holds the picked file + a local preview URL, separate from the saved profile
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
@@ -47,34 +75,41 @@ export default function ProfilePage() {
       setLoading(true);
       setNotFound(false);
 
-
       const supabase = getSupabaseBrowserClient();
+
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser();
 
       if (authUser) {
-  setAuthProvider(authUser.app_metadata?.provider ?? "email");
+        setAuthProvider(
+          authUser.app_metadata?.provider ?? "email"
+        );
 
-  if (authUser.created_at) {
-    setAccountCreated(
-      new Date(authUser.created_at).toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric",
-      })
-    );
-  }
+        if (authUser.created_at) {
+          setAccountCreated(
+            new Date(authUser.created_at).toLocaleDateString(
+              "en-US",
+              {
+                month: "long",
+                year: "numeric",
+              }
+            )
+          );
+        }
 
-  if (authUser.last_sign_in_at) {
-    setLastLogin(
-      new Date(authUser.last_sign_in_at).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    );
-  }
-}
+        if (authUser.last_sign_in_at) {
+          setLastLogin(
+            new Date(
+              authUser.last_sign_in_at
+            ).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          );
+        }
+      }
 
       const response = await fetch("/api/profile");
 
@@ -90,12 +125,15 @@ export default function ProfilePage() {
       }
 
       const data: Profile = await response.json();
+
       setProfile(data);
+
       setDraft({
         full_name: data.full_name ?? "",
         phone: data.phone ?? "",
         location: data.location ?? "",
       });
+
       setLoading(false);
     };
 
@@ -104,11 +142,13 @@ export default function ProfilePage() {
 
   const handleEdit = () => {
     if (!profile) return;
+
     setDraft({
       full_name: profile.full_name ?? "",
       phone: profile.phone ?? "",
       location: profile.location ?? "",
     });
+
     setAvatarFile(null);
     setAvatarPreview(null);
     setIsEditing(true);
@@ -116,25 +156,32 @@ export default function ProfilePage() {
 
   const handleCancel = () => {
     if (!profile) return;
+
     setDraft({
       full_name: profile.full_name ?? "",
       phone: profile.phone ?? "",
       location: profile.location ?? "",
     });
+
     setAvatarFile(null);
     setAvatarPreview(null);
     setIsEditing(false);
   };
 
   const handleAvatarSelect = (file: File) => {
-    // Basic client-side validation
-    const maxSizeBytes = 5 * 1024 * 1024; // 5MB
+    const maxSizeBytes = 5 * 1024 * 1024;
+
     if (!file.type.startsWith("image/")) {
-      showToast("Please choose an image file", { variant: "error" });
+      showToast("Please choose an image file", {
+        variant: "error",
+      });
       return;
     }
+
     if (file.size > maxSizeBytes) {
-      showToast("Image must be smaller than 5MB", { variant: "error" });
+      showToast("Image must be smaller than 5MB", {
+        variant: "error",
+      });
       return;
     }
 
@@ -153,38 +200,49 @@ export default function ProfilePage() {
 
     if (!user) {
       setSaving(false);
-      showToast("Not signed in", { variant: "error" });
+
+      showToast("Not signed in", {
+        variant: "error",
+      });
+
       return;
     }
 
     let avatar_url = profile?.avatar_url ?? null;
 
-    // Only touch Storage if the user actually picked a new file
     if (avatarFile) {
       const fileExt = avatarFile.name.split(".").pop();
       const filePath = `${user.id}/avatar.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, avatarFile, {
-          upsert: true,
-        });
+      const { error: uploadError } =
+        await supabase.storage
+          .from("avatars")
+          .upload(filePath, avatarFile, {
+            upsert: true,
+          });
 
       if (uploadError) {
         setSaving(false);
-        console.error("AVATAR UPLOAD ERROR:", uploadError);
+
+        console.error(
+          "AVATAR UPLOAD ERROR:",
+          uploadError
+        );
+
         showToast("Failed to upload avatar", {
           description: uploadError.message,
           variant: "error",
         });
+
         return;
       }
 
       const {
         data: { publicUrl },
-      } = supabase.storage.from("avatars").getPublicUrl(filePath);
+      } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
 
-      // Cache-bust so the new image shows immediately, since the filename stays the same
       avatar_url = `${publicUrl}?t=${Date.now()}`;
     }
 
@@ -203,11 +261,16 @@ export default function ProfilePage() {
     setSaving(false);
 
     if (error) {
-      console.error("PROFILE UPDATE ERROR:", error);
+      console.error(
+        "PROFILE UPDATE ERROR:",
+        error
+      );
+
       showToast("Failed to update profile", {
         description: error.message,
         variant: "error",
       });
+
       return;
     }
 
@@ -215,51 +278,72 @@ export default function ProfilePage() {
     setAvatarFile(null);
     setAvatarPreview(null);
     setIsEditing(false);
-    showToast("Profile updated successfully", { variant: "success" });
+
+    showToast("Profile updated successfully", {
+      variant: "success",
+    });
   };
 
   if (loading) {
-  return (
-    <>
-      <TopNavbar pageReady={true} />
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative h-14 w-14">
-            <div className="absolute inset-0 rounded-full border-4 border-slate-800" />
-            <div className="absolute inset-0 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+    return (
+      <>
+        <TopNavbar pageReady={true} />
+
+        <main className="min-h-screen bg-slate-950 p-6">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-6">
+              <BackToDashboardButton />
+            </div>
+
+            <div className="flex min-h-[70vh] items-center justify-center">
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative h-14 w-14">
+                  <div className="absolute inset-0 rounded-full border-4 border-slate-800" />
+                  <div className="absolute inset-0 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+                </div>
+
+                <p className="animate-pulse text-sm font-medium text-slate-400">
+                  Loading profile...
+                </p>
+              </div>
+            </div>
           </div>
-          <p className="animate-pulse text-sm font-medium text-slate-400">
-            Loading profile...
-          </p>
-        </div>
-      </main>
-    </>
-  );
-}
+        </main>
+      </>
+    );
+  }
 
   if (notFound) {
-  return (
-    <>
-      <TopNavbar pageReady={true} />
-      <main className="min-h-screen bg-slate-950 p-6">
-        <div className="mx-auto max-w-7xl">
-          <p className="text-slate-400">
-            No profile found for this account.
-          </p>
-        </div>
-      </main>
-    </>
-  );
-}
+    return (
+      <>
+        <TopNavbar pageReady={true} />
+
+        <main className="min-h-screen bg-slate-950 p-6">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-6">
+              <BackToDashboardButton />
+            </div>
+
+            <p className="text-slate-400">
+              No profile found for this account.
+            </p>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
       <TopNavbar pageReady={true} />
+
       <main className="min-h-screen bg-slate-950 p-6">
         <div className="mx-auto max-w-7xl space-y-6">
+          <BackToDashboardButton />
+
           <ProfileHeader />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <ProfileAvatar
               profile={profile}
               isEditing={isEditing}
@@ -277,7 +361,9 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <AccountSettings authProvider={authProvider} />
+          <AccountSettings
+            authProvider={authProvider}
+          />
 
           <SystemInformation
             accountCreated={accountCreated}

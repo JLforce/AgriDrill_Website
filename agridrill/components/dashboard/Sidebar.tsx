@@ -10,15 +10,19 @@ interface NavItemProps {
   readonly onClick?: () => void;
 }
 
-function NavItem({ label, active = false, onClick }: NavItemProps) {
+function NavItem({
+  label,
+  active = false,
+  onClick,
+}: NavItemProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-current={active ? "page" : undefined}
-      className={`block w-full rounded-lg px-4 py-3 text-left text-sm font-medium transition duration-150 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-[#111827] ${
+      className={`block w-full cursor-pointer rounded-lg px-4 py-3 text-left text-sm font-medium transition duration-150 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-[#111827] ${
         active
-          ? "bg-[#2f3742] text-white font-semibold shadow-[inset_0_0_0_1px_rgba(243,244,246,0.12)]"
+          ? "bg-[#2f3742] font-semibold text-white shadow-[inset_0_0_0_1px_rgba(243,244,246,0.12)]"
           : "text-[#a5b1c2] hover:bg-[#1f2937] hover:text-[#d1d5db]"
       }`}
     >
@@ -33,13 +37,19 @@ interface SidebarProps {
   readonly pageReady: boolean;
 }
 
-export function Sidebar({ activePage, onSelectPage, pageReady }: SidebarProps) {
+export function Sidebar({
+  activePage,
+  onSelectPage,
+  pageReady,
+}: SidebarProps) {
   const router = useRouter();
 
   return (
     <aside
-      className={`hidden rounded-2xl border border-[#1f2937] bg-[#111827] p-3 lg:flex lg:min-h-[92vh] lg:flex-col transition-all duration-700 delay-100 ${
-        pageReady ? "translate-x-0 opacity-100" : "-translate-x-3 opacity-0"
+      className={`hidden rounded-2xl border border-[#1f2937] bg-[#111827] p-3 transition-all duration-700 delay-100 lg:sticky lg:top-4 lg:flex lg:h-[calc(100vh-2rem)] lg:self-start lg:flex-col ${
+        pageReady
+          ? "translate-x-0 opacity-100"
+          : "-translate-x-3 opacity-0"
       }`}
     >
       <div className="mb-6 rounded-xl bg-[#0f172a] p-4">
@@ -51,9 +61,15 @@ export function Sidebar({ activePage, onSelectPage, pageReady }: SidebarProps) {
             height={28}
             className="rounded-md border border-[#334155] bg-[#111827] object-contain p-1"
           />
-          <p className="text-xl font-extrabold tracking-tight text-white">AgriDrill</p>
+
+          <p className="text-xl font-extrabold tracking-tight text-white">
+            AgriDrill
+          </p>
         </div>
-        <p className="mt-0.5 text-[11px] font-medium uppercase tracking-widest text-[#94a3b8]">Operator Panel</p>
+
+        <p className="mt-0.5 text-[11px] font-medium uppercase tracking-widest text-[#94a3b8]">
+          Operator Panel
+        </p>
       </div>
 
       <div className="space-y-1">
@@ -65,8 +81,14 @@ export function Sidebar({ activePage, onSelectPage, pageReady }: SidebarProps) {
             router.push("/dashboard");
           }}
         />
+
         {primaryNav.map((item) => (
-          <NavItem key={item.label} label={item.label} active={activePage === item.label} onClick={() => onSelectPage(item.label)} />
+          <NavItem
+            key={item.label}
+            label={item.label}
+            active={activePage === item.label}
+            onClick={() => onSelectPage(item.label)}
+          />
         ))}
       </div>
 
@@ -90,7 +112,6 @@ export function Sidebar({ activePage, onSelectPage, pageReady }: SidebarProps) {
           />
         ))}
       </div>
-
     </aside>
   );
 }
