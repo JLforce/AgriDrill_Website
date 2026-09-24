@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
+import DashboardShell from "@/components/dashboard/DashboardShell";
+
 interface OperationSession {
   id: number;
   started_at: string;
@@ -101,7 +103,9 @@ export default function OperationHistoryPage() {
   const [sessions, setSessions] = useState<
     OperationSession[]
   >([]);
+
   const [isLoading, setIsLoading] = useState(true);
+
   const [error, setError] = useState<string | null>(
     null
   );
@@ -141,6 +145,7 @@ export default function OperationHistoryPage() {
         setError(
           "Failed to load operation history."
         );
+
         setIsLoading(false);
         return;
       }
@@ -217,22 +222,20 @@ export default function OperationHistoryPage() {
   }, [sessions]);
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-emerald-50/40">
-      <div className="mx-auto w-full max-w-[1500px] px-5 py-7 sm:px-8 sm:py-9 lg:px-10">
-
+    <DashboardShell>
+      <div className="w-full max-w-[1500px]">
         {/* HERO HEADER */}
         <div className="relative mb-8 overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 px-6 py-8 shadow-xl sm:px-8 sm:py-10">
-
           {/* Decorative animated background */}
-          <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl animate-pulse" />
+          <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 animate-pulse rounded-full bg-emerald-400/10 blur-3xl" />
+
           <div
-            className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl animate-pulse"
+            className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 animate-pulse rounded-full bg-cyan-400/10 blur-3xl"
             style={{ animationDelay: "1s" }}
           />
 
           <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              
               <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
                 Operation History
               </h1>
@@ -259,7 +262,6 @@ export default function OperationHistoryPage() {
         {/* SUMMARY CARDS */}
         {!isLoading && !error && (
           <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-
             {/* Operations */}
             <div
               className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl"
@@ -384,7 +386,6 @@ export default function OperationHistoryPage() {
 
         {/* MAIN TABLE CARD */}
         <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-shadow duration-300 hover:shadow-lg">
-
           {/* Header */}
           <div className="relative overflow-hidden border-b border-slate-200 px-6 py-6 sm:px-7">
             <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-emerald-500 via-teal-500 to-blue-500" />
@@ -509,24 +510,25 @@ export default function OperationHistoryPage() {
                           }}
                           role="link"
                           tabIndex={0}
-                          aria-label={`View operation ${session.id}`}   
+                          aria-label={`View operation ${session.id}`}
                           onClick={() =>
                             router.push(
                               `/operation-history/${session.id}`
-    )
-  }
-  onKeyDown={(event) => {
-    if (
-      event.key === "Enter" ||
-      event.key === " "
-    ) {
-      event.preventDefault();
-      router.push(
-        `/operation-history/${session.id}`
-      );
-    }
-  }}
->
+                            )
+                          }
+                          onKeyDown={(event) => {
+                            if (
+                              event.key === "Enter" ||
+                              event.key === " "
+                            ) {
+                              event.preventDefault();
+
+                              router.push(
+                                `/operation-history/${session.id}`
+                              );
+                            }
+                          }}
+                        >
                           <td className="whitespace-nowrap px-6 py-5">
                             <div className="font-semibold text-slate-900 transition-colors duration-200 group-hover:text-emerald-700">
                               {formatDate(
@@ -587,22 +589,18 @@ export default function OperationHistoryPage() {
                           <td className="whitespace-nowrap px-6 py-5">
                             <span
                               className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-300 group-hover:scale-105 ${
-                                session.status ===
-                                "running"
+                                session.status === "running"
                                   ? "bg-amber-50 text-amber-700"
-                                  : session.status ===
-                                      "completed"
+                                  : session.status === "completed"
                                     ? "bg-emerald-50 text-emerald-700"
                                     : "bg-slate-100 text-slate-600"
                               }`}
                             >
                               <span
                                 className={`mr-2 h-2 w-2 rounded-full ${
-                                  session.status ===
-                                  "running"
+                                  session.status === "running"
                                     ? "animate-pulse bg-amber-500"
-                                    : session.status ===
-                                        "completed"
+                                    : session.status === "completed"
                                       ? "bg-emerald-500"
                                       : "bg-slate-400"
                                 }`}
@@ -635,6 +633,6 @@ export default function OperationHistoryPage() {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardShell>
   );
 }
