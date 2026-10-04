@@ -13,9 +13,9 @@ export function Footer({ pageReady }: FooterProps) {
         pageReady ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
       }`}
     >
-      <div className="mx-auto flex w-full max-w-375 flex-col gap-5 px-6 py-5 text-sm text-[#94a3b8] sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto flex w-full max-w-375 flex-col gap-5 px-4 py-5 text-sm text-[#94a3b8] sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#334155] bg-[#1e293b] text-[#6ee7b7] shadow-inner">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#334155] bg-[#1e293b] text-[#6ee7b7] shadow-inner">
             <FiActivity className="h-4 w-4" aria-hidden="true" />
           </span>
           <div>
@@ -36,7 +36,8 @@ export function Footer({ pageReady }: FooterProps) {
             <FiShield className="h-3.5 w-3.5 text-[#64748b]" aria-hidden="true" />
             Protected telemetry
           </span>
-          <span className="border-l border-[#334155] pl-5 text-[#64748b]">Build v2.1</span>
+          {/* The divider only makes sense when the items are on one line */}
+          <span className="text-[#64748b] sm:border-l sm:border-[#334155] sm:pl-5">Build v2.1</span>
         </div>
       </div>
     </footer>

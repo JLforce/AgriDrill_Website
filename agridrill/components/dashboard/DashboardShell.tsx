@@ -80,7 +80,14 @@ export default function DashboardShell({
     <main className="min-h-screen bg-[#e5e7eb] text-[#1f2937]">
       <TopNavbar pageReady={pageReady} />
 
-      <div className="mx-auto grid w-full max-w-375 gap-4 p-4 lg:grid-cols-[250px_1fr]">
+      {/*
+        Below 1024px: one column.
+        1024px and up: sidebar (250px) + content.
+
+        minmax(0, 1fr) lets the content column shrink, so a wide table or
+        card can never push the whole page sideways.
+      */}
+      <div className="mx-auto grid w-full max-w-375 grid-cols-1 gap-3 p-3 sm:gap-4 sm:p-4 lg:grid-cols-[250px_minmax(0,1fr)]">
         <Sidebar
           activePage={activePage}
           onSelectPage={handleSelectPage}
@@ -88,7 +95,7 @@ export default function DashboardShell({
         />
 
         <section
-          className={`rounded-2xl border border-[#d1d5db] bg-[#f3f4f6] p-4 transition-all duration-700 delay-200 lg:p-6 ${
+          className={`min-w-0 rounded-2xl border border-[#d1d5db] bg-[#f3f4f6] p-3 transition-all duration-700 delay-200 sm:p-4 lg:p-6 ${
             pageReady
               ? "translate-y-0 opacity-100"
               : "translate-y-3 opacity-0"

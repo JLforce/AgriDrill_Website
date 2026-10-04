@@ -148,9 +148,153 @@ function getCustomRangeEnd(dateString: string) {
   return Number.isNaN(end.getTime()) ? null : end;
 }
 
+// 16px text on phones: smaller text makes iPhones zoom the page when a
+// field is tapped.
+const FIELD_CLASSES =
+  "w-full min-w-0 rounded-xl border border-slate-200 bg-white px-4 py-3 text-base font-medium text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 sm:text-sm";
+
+function StatusPill({ status }: { status: string }) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-300 group-hover:scale-105 ${
+        status === "running"
+          ? "bg-amber-50 text-amber-700"
+          : status === "completed"
+            ? "bg-emerald-50 text-emerald-700"
+            : "bg-slate-100 text-slate-600"
+      }`}
+    >
+      <span
+        className={`mr-2 h-2 w-2 rounded-full ${
+          status === "running"
+            ? "animate-pulse bg-amber-500"
+            : status === "completed"
+              ? "bg-emerald-500"
+              : "bg-slate-400"
+        }`}
+      />
+
+      {formatStatus(status)}
+    </span>
+  );
+}
+
+interface OperationCardProps {
+  readonly session: OperationSession;
+  readonly commandCount: number;
+  readonly onOpen: () => void;
+}
+
+/** Phone and tablet layout: one card per operation. */
+function OperationCard({
+  session,
+  commandCount,
+  onOpen,
+}: OperationCardProps) {
+  const holes = getHoleCount(session);
+  const seeds = getSeedCount(session);
+
+  const tiles = [
+    {
+      label: "Holes",
+      value: holes ?? "—",
+      color: "text-emerald-700",
+    },
+    {
+      label: "Seeds",
+      value: seeds ?? "—",
+      color: "text-blue-700",
+    },
+    {
+      label: "Commands",
+      value: commandCount,
+      color: "text-violet-700",
+    },
+    {
+      label: "Obstacles",
+      value: session.obstacle_count,
+      color:
+        session.obstacle_count > 0
+          ? "text-amber-700"
+          : "text-slate-500",
+    },
+  ];
+
+  return (
+    <div
+      className="group cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-200"
+      role="link"
+      tabIndex={0}
+      aria-label={`View operation ${session.id}`}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-semibold text-slate-900 transition-colors group-hover:text-emerald-700">
+            {formatDate(session.started_at)}
+          </p>
+
+          <p className="mt-0.5 text-xs text-slate-400">
+            {formatTime(session.started_at)} · Operation #
+            {session.id}
+          </p>
+        </div>
+
+        <StatusPill status={session.status} />
+      </div>
+
+      <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+        <span>Duration</span>
+
+        <span
+          className={
+            session.ended_at
+              ? "rounded-lg bg-slate-100 px-2.5 py-1 text-sm font-medium text-slate-700"
+              : "rounded-lg bg-amber-50 px-2.5 py-1 text-sm font-semibold text-amber-700"
+          }
+        >
+          {formatDuration(
+            session.started_at,
+            session.ended_at
+          )}
+        </span>
+      </div>
+
+      <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {tiles.map((tile) => (
+          <div
+            key={tile.label}
+            className="rounded-xl bg-slate-50 px-3 py-2"
+          >
+            <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              {tile.label}
+            </dt>
+
+            <dd
+              className={`mt-0.5 text-sm font-bold tabular-nums ${tile.color}`}
+            >
+              {tile.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 export default function OperationHistoryPage() {
   const router = useRouter();
-  const supabase = getSupabaseBrowserClient();
+
+  const supabase = useMemo(
+    () => getSupabaseBrowserClient(),
+    []
+  );
 
   const [sessions, setSessions] = useState<
     OperationSession[]
@@ -481,6 +625,10 @@ export default function OperationHistoryPage() {
     setCustomEndDate("");
   };
 
+  const openSession = (sessionId: number) => {
+    router.push(`/operation-history/${sessionId}`);
+  };
+
   const handleExport = () => {
     if (
       filteredSessions.length === 0 ||
@@ -499,10 +647,10 @@ export default function OperationHistoryPage() {
   return (
     <DashboardShell>
       <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-emerald-50/40">
-        <div className="mx-auto w-full max-w-[1500px] px-5 py-7 sm:px-8 sm:py-9 lg:px-10">
+        <div className="mx-auto w-full max-w-[1500px] px-3 py-5 sm:px-8 sm:py-9 lg:px-10">
 
           {/* HERO HEADER */}
-          <div className="relative mb-8 overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 px-6 py-8 shadow-xl sm:px-8 sm:py-10">
+          <div className="relative mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 px-5 py-6 shadow-xl sm:mb-8 sm:px-8 sm:py-10">
 
             <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 animate-pulse rounded-full bg-emerald-400/10 blur-3xl" />
 
@@ -544,10 +692,10 @@ export default function OperationHistoryPage() {
           </div>
 
           {/* FILTERS */}
-          <section className="mb-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <section className="mb-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:mb-8 sm:p-6">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
                   <FiFilter />
                 </div>
 
@@ -567,7 +715,7 @@ export default function OperationHistoryPage() {
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                  className="inline-flex min-h-11 w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                 >
                   <FiRotateCcw />
                   Clear Filters
@@ -589,7 +737,7 @@ export default function OperationHistoryPage() {
                       event.target.value as StatusFilter
                     )
                   }
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                  className={FIELD_CLASSES}
                 >
                   <option value="all">
                     All statuses
@@ -618,7 +766,7 @@ export default function OperationHistoryPage() {
                       event.target.value as DateFilter
                     )
                   }
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                  className={FIELD_CLASSES}
                 >
                   <option value="all">
                     All dates
@@ -658,7 +806,7 @@ export default function OperationHistoryPage() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <label className="block">
+                  <label className="block min-w-0">
                     <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                       From
                     </span>
@@ -672,11 +820,11 @@ export default function OperationHistoryPage() {
                           event.target.value
                         )
                       }
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                      className={`${FIELD_CLASSES} [&::-webkit-date-and-time-value]:text-left`}
                     />
                   </label>
 
-                  <label className="block">
+                  <label className="block min-w-0">
                     <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                       To
                     </span>
@@ -690,7 +838,7 @@ export default function OperationHistoryPage() {
                           event.target.value
                         )
                       }
-                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                      className={`${FIELD_CLASSES} [&::-webkit-date-and-time-value]:text-left`}
                     />
                   </label>
                 </div>
@@ -726,146 +874,153 @@ export default function OperationHistoryPage() {
             </div>
           </section>
 
-          {/* SUMMARY CARDS */}
+          {/*
+            SUMMARY CARDS
+            The number of columns depends on the width of this area, not on
+            the screen: 1 column on phones, 2 on small tablets, 3 on larger
+            areas and 5 only when each card has room to breathe.
+          */}
           {!isLoading && !error && (
-            <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="mb-6 @container sm:mb-8">
+              <div className="grid grid-cols-1 gap-4 @md:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-5">
 
-              {/* Operations */}
-              <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      Total Operations
-                    </p>
+                {/* Operations */}
+                <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-500">
+                        Total Operations
+                      </p>
 
-                    <p className="mt-3 text-3xl font-bold text-slate-900">
-                      {summary.totalOperations}
-                    </p>
+                      <p className="mt-3 text-3xl font-bold text-slate-900">
+                        {summary.totalOperations}
+                      </p>
+                    </div>
+
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-xs font-bold text-white shadow-lg">
+                      OP
+                    </div>
                   </div>
 
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-xs font-bold text-white shadow-lg">
-                    OP
-                  </div>
-                </div>
-
-                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full w-full rounded-full bg-gradient-to-r from-slate-700 to-slate-900 transition-all duration-700 group-hover:translate-x-1" />
-                </div>
-
-                <p className="mt-2 text-xs text-slate-400">
-                  {summary.completedOperations} completed
-                  {summary.runningOperations > 0 &&
-                    ` • ${summary.runningOperations} running`}
-                </p>
-              </div>
-
-              {/* Holes */}
-              <div className="group rounded-2xl border border-emerald-100 bg-gradient-to-br from-white to-emerald-50/70 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-xl">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-emerald-700/70">
-                      Total Holes
-                    </p>
-
-                    <p className="mt-3 text-3xl font-bold text-slate-900">
-                      {summary.totalHoles}
-                    </p>
+                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-full w-full rounded-full bg-gradient-to-r from-slate-700 to-slate-900 transition-all duration-700 group-hover:translate-x-1" />
                   </div>
 
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-xs font-bold text-emerald-700">
-                    HL
-                  </div>
+                  <p className="mt-2 text-xs text-slate-400">
+                    {summary.completedOperations} completed
+                    {summary.runningOperations > 0 &&
+                      ` • ${summary.runningOperations} running`}
+                  </p>
                 </div>
 
-                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-emerald-100">
-                  <div className="h-full w-4/5 rounded-full bg-gradient-to-r from-emerald-500 to-green-400 transition-all duration-700 group-hover:w-full" />
-                </div>
+                {/* Holes */}
+                <div className="group rounded-2xl border border-emerald-100 bg-gradient-to-br from-white to-emerald-50/70 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-xl">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-emerald-700/70">
+                        Total Holes
+                      </p>
 
-                <p className="mt-2 text-xs text-emerald-700/50">
-                  Holes created across filtered
-                  sessions
-                </p>
-              </div>
+                      <p className="mt-3 text-3xl font-bold text-slate-900">
+                        {summary.totalHoles}
+                      </p>
+                    </div>
 
-              {/* Seeds */}
-              <div className="group rounded-2xl border border-blue-100 bg-gradient-to-br from-white to-blue-50/70 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-blue-700/70">
-                      Total Seeds
-                    </p>
-
-                    <p className="mt-3 text-3xl font-bold text-slate-900">
-                      {summary.totalSeeds}
-                    </p>
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-xs font-bold text-emerald-700">
+                      HL
+                    </div>
                   </div>
 
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100 text-xs font-bold text-blue-700">
-                    SD
-                  </div>
-                </div>
-
-                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-blue-100">
-                  <div className="h-full w-4/5 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-700 group-hover:w-full" />
-                </div>
-
-                <p className="mt-2 text-xs text-blue-700/50">
-                  Recorded seedlings planted
-                </p>
-              </div>
-
-              {/* Commands */}
-              <div className="group rounded-2xl border border-violet-100 bg-gradient-to-br from-white to-violet-50/70 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-violet-200 hover:shadow-xl">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-violet-700/70">
-                      Commands
-                    </p>
-
-                    <p className="mt-3 text-3xl font-bold text-slate-900">
-                      {summary.totalCommands}
-                    </p>
+                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-emerald-100">
+                    <div className="h-full w-4/5 rounded-full bg-gradient-to-r from-emerald-500 to-green-400 transition-all duration-700 group-hover:w-full" />
                   </div>
 
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-xs font-bold text-violet-700">
-                    CM
-                  </div>
+                  <p className="mt-2 text-xs text-emerald-700/50">
+                    Holes created across filtered
+                    sessions
+                  </p>
                 </div>
 
-                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-violet-100">
-                  <div className="h-full w-3/5 rounded-full bg-gradient-to-r from-violet-500 to-purple-400 transition-all duration-700 group-hover:w-full" />
-                </div>
+                {/* Seeds */}
+                <div className="group rounded-2xl border border-blue-100 bg-gradient-to-br from-white to-blue-50/70 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-blue-700/70">
+                        Total Seeds
+                      </p>
 
-                <p className="mt-2 text-xs text-violet-700/50">
-                  Machine commands recorded
-                </p>
-              </div>
+                      <p className="mt-3 text-3xl font-bold text-slate-900">
+                        {summary.totalSeeds}
+                      </p>
+                    </div>
 
-              {/* Obstacles */}
-              <div className="group rounded-2xl border border-amber-100 bg-gradient-to-br from-white to-amber-50/70 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-amber-200 hover:shadow-xl">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-amber-700/70">
-                      Obstacle Events
-                    </p>
-
-                    <p className="mt-3 text-3xl font-bold text-slate-900">
-                      {summary.totalObstacles}
-                    </p>
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-xs font-bold text-blue-700">
+                      SD
+                    </div>
                   </div>
 
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-xs font-bold text-amber-700">
-                    OB
+                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-blue-100">
+                    <div className="h-full w-4/5 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-700 group-hover:w-full" />
                   </div>
+
+                  <p className="mt-2 text-xs text-blue-700/50">
+                    Recorded seedlings planted
+                  </p>
                 </div>
 
-                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-amber-100">
-                  <div className="h-full w-2/5 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all duration-700 group-hover:w-3/5" />
+                {/* Commands */}
+                <div className="group rounded-2xl border border-violet-100 bg-gradient-to-br from-white to-violet-50/70 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-violet-200 hover:shadow-xl">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-violet-700/70">
+                        Commands
+                      </p>
+
+                      <p className="mt-3 text-3xl font-bold text-slate-900">
+                        {summary.totalCommands}
+                      </p>
+                    </div>
+
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-xs font-bold text-violet-700">
+                      CM
+                    </div>
+                  </div>
+
+                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-violet-100">
+                    <div className="h-full w-3/5 rounded-full bg-gradient-to-r from-violet-500 to-purple-400 transition-all duration-700 group-hover:w-full" />
+                  </div>
+
+                  <p className="mt-2 text-xs text-violet-700/50">
+                    Machine commands recorded
+                  </p>
                 </div>
 
-                <p className="mt-2 text-xs text-amber-700/50">
-                  Detected obstacle events
-                </p>
+                {/* Obstacles */}
+                <div className="group rounded-2xl border border-amber-100 bg-gradient-to-br from-white to-amber-50/70 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-amber-200 hover:shadow-xl">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-amber-700/70">
+                        Obstacle Events
+                      </p>
+
+                      <p className="mt-3 text-3xl font-bold text-slate-900">
+                        {summary.totalObstacles}
+                      </p>
+                    </div>
+
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-xs font-bold text-amber-700">
+                      OB
+                    </div>
+                  </div>
+
+                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-amber-100">
+                    <div className="h-full w-2/5 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 transition-all duration-700 group-hover:w-3/5" />
+                  </div>
+
+                  <p className="mt-2 text-xs text-amber-700/50">
+                    Detected obstacle events
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -874,7 +1029,7 @@ export default function OperationHistoryPage() {
           <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-shadow duration-300 hover:shadow-lg">
 
             {/* Header */}
-            <div className="relative overflow-hidden border-b border-slate-200 px-6 py-6 sm:px-7">
+            <div className="relative overflow-hidden border-b border-slate-200 px-4 py-5 sm:px-7 sm:py-6">
               <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-emerald-500 via-teal-500 to-blue-500" />
 
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -902,7 +1057,7 @@ export default function OperationHistoryPage() {
                     filteredSessions.length === 0 ||
                     customRangeInvalid
                   }
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
                 >
                   <FiDownload />
                   Export CSV
@@ -912,7 +1067,7 @@ export default function OperationHistoryPage() {
 
             {/* Loading */}
             {isLoading && (
-              <div className="px-6 py-20 text-center">
+              <div className="px-4 py-14 text-center sm:px-6 sm:py-20">
                 <div className="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-500" />
 
                 <p className="text-sm font-medium text-slate-600">
@@ -927,7 +1082,7 @@ export default function OperationHistoryPage() {
 
             {/* Error */}
             {!isLoading && error && (
-              <div className="px-6 py-20 text-center">
+              <div className="px-4 py-14 text-center sm:px-6 sm:py-20">
                 <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-lg font-bold text-red-500">
                   !
                 </div>
@@ -946,7 +1101,7 @@ export default function OperationHistoryPage() {
             {!isLoading &&
               !error &&
               sessions.length === 0 && (
-                <div className="px-6 py-20 text-center">
+                <div className="px-4 py-14 text-center sm:px-6 sm:py-20">
                   <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-50 to-blue-50 text-sm font-bold text-slate-500 shadow-sm">
                     OP
                   </div>
@@ -968,7 +1123,7 @@ export default function OperationHistoryPage() {
               !error &&
               sessions.length > 0 &&
               filteredSessions.length === 0 && (
-                <div className="px-6 py-20 text-center">
+                <div className="px-4 py-14 text-center sm:px-6 sm:py-20">
                   <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-sm font-bold text-slate-500 shadow-sm">
                     0
                   </div>
@@ -987,7 +1142,7 @@ export default function OperationHistoryPage() {
                   <button
                     type="button"
                     onClick={clearFilters}
-                    className="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                    className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
                   >
                     <FiRotateCcw />
                     Clear Filters
@@ -995,51 +1150,69 @@ export default function OperationHistoryPage() {
                 </div>
               )}
 
-            {/* Table */}
+            {/*
+              Results.
+              Below 768px of available width: one card per operation.
+              From 768px of available width: the table (Date and start time
+              share one column so all columns fit without sideways scrolling).
+            */}
             {!isLoading &&
               !error &&
               filteredSessions.length > 0 && (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1100px]">
-                    <thead>
-                      <tr className="border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50">
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Date
-                        </th>
+                <div className="@container">
+                  {/* Cards */}
+                  <div className="grid grid-cols-1 gap-3 p-4 @xl:grid-cols-2 @3xl:hidden">
+                    {filteredSessions.map((session) => (
+                      <OperationCard
+                        key={session.id}
+                        session={session}
+                        commandCount={
+                          commandCounts[session.id] ?? 0
+                        }
+                        onOpen={() =>
+                          openSession(session.id)
+                        }
+                      />
+                    ))}
+                  </div>
 
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Start Time
-                        </th>
+                  {/* Table */}
+                  <div className="hidden overflow-x-auto @3xl:block">
+                    <table className="w-full min-w-[720px]">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50">
+                          <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                            Date
+                          </th>
 
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Duration
-                        </th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                            Duration
+                          </th>
 
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Holes
-                        </th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                            Holes
+                          </th>
 
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Seeds
-                        </th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                            Seeds
+                          </th>
 
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Commands
-                        </th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                            Commands
+                          </th>
 
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Obstacles
-                        </th>
+                          <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                            Obstacles
+                          </th>
 
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
+                          <th className="px-4 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
 
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredSessions.map(
-                        (session, index) => {
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredSessions.map((session) => {
                           const holes =
                             getHoleCount(session);
 
@@ -1047,42 +1220,31 @@ export default function OperationHistoryPage() {
                             getSeedCount(session);
 
                           const sessionCommandCount =
-                            commandCounts[
-                              session.id
-                            ] ?? 0;
+                            commandCounts[session.id] ??
+                            0;
 
                           return (
                             <tr
                               key={session.id}
                               className="group cursor-pointer transition-all duration-300 hover:bg-gradient-to-r hover:from-emerald-50/40 hover:via-white hover:to-blue-50/30"
-                              style={{
-                                animationDelay: `${
-                                  index * 75
-                                }ms`,
-                              }}
                               role="link"
                               tabIndex={0}
                               aria-label={`View operation ${session.id}`}
                               onClick={() =>
-                                router.push(
-                                  `/operation-history/${session.id}`
-                                )
+                                openSession(session.id)
                               }
                               onKeyDown={(event) => {
                                 if (
-                                  event.key ===
-                                    "Enter" ||
+                                  event.key === "Enter" ||
                                   event.key === " "
                                 ) {
                                   event.preventDefault();
 
-                                  router.push(
-                                    `/operation-history/${session.id}`
-                                  );
+                                  openSession(session.id);
                                 }
                               }}
                             >
-                              <td className="whitespace-nowrap px-6 py-5">
+                              <td className="whitespace-nowrap px-4 py-5">
                                 <div className="font-semibold text-slate-900 transition-colors duration-200 group-hover:text-emerald-700">
                                   {formatDate(
                                     session.started_at
@@ -1090,18 +1252,14 @@ export default function OperationHistoryPage() {
                                 </div>
 
                                 <div className="mt-1 text-xs text-slate-400">
-                                  Operation #
-                                  {session.id}
+                                  {formatTime(
+                                    session.started_at
+                                  )}{" "}
+                                  · Op #{session.id}
                                 </div>
                               </td>
 
-                              <td className="whitespace-nowrap px-6 py-5 text-sm text-slate-600">
-                                {formatTime(
-                                  session.started_at
-                                )}
-                              </td>
-
-                              <td className="whitespace-nowrap px-6 py-5">
+                              <td className="whitespace-nowrap px-4 py-5">
                                 <span
                                   className={
                                     session.ended_at
@@ -1116,25 +1274,25 @@ export default function OperationHistoryPage() {
                                 </span>
                               </td>
 
-                              <td className="whitespace-nowrap px-6 py-5">
+                              <td className="whitespace-nowrap px-4 py-5">
                                 <span className="text-sm font-bold text-emerald-700">
                                   {holes ?? "—"}
                                 </span>
                               </td>
 
-                              <td className="whitespace-nowrap px-6 py-5">
+                              <td className="whitespace-nowrap px-4 py-5">
                                 <span className="text-sm font-bold text-blue-700">
                                   {seeds ?? "—"}
                                 </span>
                               </td>
 
-                              <td className="whitespace-nowrap px-6 py-5">
+                              <td className="whitespace-nowrap px-4 py-5">
                                 <span className="rounded-lg bg-violet-50 px-2.5 py-1.5 text-sm font-semibold text-violet-700">
                                   {sessionCommandCount}
                                 </span>
                               </td>
 
-                              <td className="whitespace-nowrap px-6 py-5">
+                              <td className="whitespace-nowrap px-4 py-5">
                                 <span
                                   className={`rounded-lg px-2.5 py-1.5 text-sm font-semibold ${
                                     session.obstacle_count >
@@ -1143,47 +1301,21 @@ export default function OperationHistoryPage() {
                                       : "bg-slate-50 text-slate-500"
                                   }`}
                                 >
-                                  {
-                                    session.obstacle_count
-                                  }
+                                  {session.obstacle_count}
                                 </span>
                               </td>
 
-                              <td className="whitespace-nowrap px-6 py-5">
-                                <span
-                                  className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-300 group-hover:scale-105 ${
-                                    session.status ===
-                                    "running"
-                                      ? "bg-amber-50 text-amber-700"
-                                      : session.status ===
-                                          "completed"
-                                        ? "bg-emerald-50 text-emerald-700"
-                                        : "bg-slate-100 text-slate-600"
-                                  }`}
-                                >
-                                  <span
-                                    className={`mr-2 h-2 w-2 rounded-full ${
-                                      session.status ===
-                                      "running"
-                                        ? "animate-pulse bg-amber-500"
-                                        : session.status ===
-                                            "completed"
-                                          ? "bg-emerald-500"
-                                          : "bg-slate-400"
-                                    }`}
-                                  />
-
-                                  {formatStatus(
-                                    session.status
-                                  )}
-                                </span>
+                              <td className="whitespace-nowrap px-4 py-5">
+                                <StatusPill
+                                  status={session.status}
+                                />
                               </td>
                             </tr>
                           );
-                        }
-                      )}
-                    </tbody>
-                  </table>
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
           </section>
