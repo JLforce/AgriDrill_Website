@@ -10,9 +10,15 @@ export interface UseRobotCommandsResult {
   readonly sendCommand: (command: Command) => Promise<void>;
 }
 
+/** True when the server refused the command because another user owns the machine. */
+function isMachineBusyError(message: string): boolean {
+  return message.toLowerCase().includes("another user");
+}
+
 /** Maps a raw error message to a short, operator-friendly toast title. */
 function toastTitleForError(message: string): string {
   const lower = message.toLowerCase();
+  if (isMachineBusyError(message)) return "Machine In Use";
   if (lower.includes("timeout")) return "MQTT Timeout";
   if (lower.includes("offline")) return "Machine Offline";
   if (lower.includes("supabase")) return "Supabase Error";
@@ -50,8 +56,15 @@ export function useRobotCommands(): UseRobotCommandsResult {
         showToast("Command Sent", { description: `${command} command delivered.`, variant: "success" });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to send command";
+
+        // When another user is operating the machine, show the server's
+        // explanation instead of the generic "check the connection" text.
+        const description = isMachineBusyError(message)
+          ? message
+          : `Failed to send ${command} command. Check the machine connection.`;
+
         showToast(toastTitleForError(message), {
-          description: `Failed to send ${command} command. Check the machine connection.`,
+          description,
           variant: "error",
         });
       } finally {

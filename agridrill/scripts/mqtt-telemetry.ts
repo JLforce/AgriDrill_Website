@@ -31,6 +31,8 @@ if (
 
 // ============================================================
 // SUPABASE CLIENT
+// (service role key: bypasses Row Level Security, so this
+//  script is allowed to insert telemetry and notifications)
 // ============================================================
 
 const supabase = createClient(
@@ -71,6 +73,125 @@ async function updateMachineStatus(
   console.log(
     `Machine status updated: ${line1} / ${line2}`
   );
+}
+
+// ============================================================
+// ACTIVE SESSION LOOKUP
+//
+// The machine is physical and shared, so we find out WHO is
+// operating it right now:
+//   machine_status.active_session_id -> operation_sessions.user_id
+//
+// The result is cached for a short time so we do not query
+// Supabase on every single MQTT message.
+// ============================================================
+
+type ActiveSession = {
+  sessionId: number;
+  userId: string;
+};
+
+const SESSION_CACHE_MS = 2000;
+
+let cachedSession: ActiveSession | null = null;
+let cachedAt = 0;
+
+async function getActiveSession(): Promise<ActiveSession | null> {
+  const now = Date.now();
+
+  if (now - cachedAt < SESSION_CACHE_MS) {
+    return cachedSession;
+  }
+
+  // 1. Which session currently owns the machine?
+  const { data: status, error: statusError } = await supabase
+    .from("machine_status")
+    .select("active_session_id")
+    .eq("id", MACHINE_STATUS_ID)
+    .single();
+
+  if (statusError) {
+    console.error(
+      "Supabase active session lookup error:",
+      statusError
+    );
+
+    return null;
+  }
+
+  if (!status?.active_session_id) {
+    cachedSession = null;
+    cachedAt = now;
+
+    return null;
+  }
+
+  // 2. Who owns that session?
+  const { data: session, error: sessionError } = await supabase
+    .from("operation_sessions")
+    .select("id, user_id")
+    .eq("id", status.active_session_id)
+    .single();
+
+  if (sessionError || !session?.user_id) {
+    console.error(
+      "Supabase session owner lookup error:",
+      sessionError
+    );
+
+    return null;
+  }
+
+  cachedSession = {
+    sessionId: session.id,
+    userId: session.user_id,
+  };
+  cachedAt = now;
+
+  return cachedSession;
+}
+
+// ============================================================
+// NOTIFICATIONS
+//
+// Notifications now belong to the user who is operating the
+// machine. If nobody is operating, there is nobody to notify,
+// so nothing is saved.
+// ============================================================
+
+async function createNotification(
+  type: string,
+  message: string
+): Promise<"saved" | "no_session" | "error"> {
+  const session = await getActiveSession();
+
+  if (!session) {
+    console.warn(
+      `No active session. Notification "${type}" not saved.`
+    );
+
+    return "no_session";
+  }
+
+  const { error } = await supabase
+    .from("notifications")
+    .insert({
+      user_id: session.userId,
+      type,
+      message,
+      is_read: false,
+    });
+
+  if (error) {
+    console.error(
+      `Supabase notification insert error (${type}):`,
+      error
+    );
+
+    return "error";
+  }
+
+  return "saved";
 }
 
 // ============================================================
@@ -208,25 +329,16 @@ mqttClient.on("message", async (topic, message) => {
       payload
     );
 
-    // Create the notification for the existing
-    // Next.js obstacle modal.
-    const { error } = await supabase
-      .from("notifications")
-      .insert({
-        type: "obstacle_detected",
-        message:
-          "An obstacle has been detected by the AgriDrill machine.",
-        is_read: false,
-      });
+    // Create the notification for the operator's
+    // obstacle modal.
+    const result = await createNotification(
+      "obstacle_detected",
+      "An obstacle has been detected by the AgriDrill machine."
+    );
 
-    if (error) {
-      console.error(
-        "Supabase obstacle notification insert error:",
-        error
-      );
-
+    if (result !== "saved") {
       // Allow another obstacle event to be processed
-      // if the database insert failed.
+      // if nothing was saved.
       obstacleActive = false;
 
       return;
@@ -324,36 +436,28 @@ mqttClient.on("message", async (topic, message) => {
   // ==========================================================
 
   if (payload === "Seedling Empty") {
-  // Update the Web machine display.
-  await updateMachineStatus(
-    "PROCESS",
-    "COMPLETE",
-    payload
-  );
-
-  // Create the seedling-empty notification.
-  const { error } = await supabase
-    .from("notifications")
-    .insert({
-      type: "seedling_empty",
-      message:
-        "No seedling detected on the conveyor. Please refill the seedling supply.",
-      is_read: false,
-    });
-
-  if (error) {
-    console.error(
-      "Supabase seedling-empty notification insert error:",
-      error
+    // Update the Web machine display.
+    await updateMachineStatus(
+      "PROCESS",
+      "COMPLETE",
+      payload
     );
-  } else {
-    console.log(
-      "Seedling-empty notification saved to Supabase."
+
+    // Create the seedling-empty notification
+    // for the operator.
+    const result = await createNotification(
+      "seedling_empty",
+      "No seedling detected on the conveyor. Please refill the seedling supply."
     );
+
+    if (result === "saved") {
+      console.log(
+        "Seedling-empty notification saved to Supabase."
+      );
+    }
+
+    return;
   }
-
-  return;
-}
 
   if (payload === "ALL STOPPED") {
     await updateMachineStatus(
@@ -418,12 +522,29 @@ mqttClient.on("message", async (topic, message) => {
   });
 
   // ----------------------------------------------------------
-  // Insert telemetry into Supabase
+  // Find out which user's session this telemetry belongs to.
+  // If nobody is operating the machine, do not save it, so it
+  // can never show up on another user's dashboard.
+  // ----------------------------------------------------------
+
+  const session = await getActiveSession();
+
+  if (!session) {
+    console.log(
+      "No active operation session. Telemetry ignored."
+    );
+
+    return;
+  }
+
+  // ----------------------------------------------------------
+  // Insert telemetry into Supabase, linked to the session
   // ----------------------------------------------------------
 
   const { error } = await supabase
     .from("telemetry_events")
     .insert({
+      operation_session_id: session.sessionId,
       ir1,
       ir4,
       seed_count: seedCount,
@@ -440,7 +561,9 @@ mqttClient.on("message", async (topic, message) => {
     return;
   }
 
-  console.log("Telemetry saved to Supabase.");
+  console.log(
+    `Telemetry saved to Supabase (session ${session.sessionId}).`
+  );
 });
 
 // ============================================================
