@@ -34,11 +34,11 @@ function StatCard({ stat }: { stat: OperationStat }) {
   return (
     <article className="dashboard-card rounded-2xl border border-slate-200 bg-slate-50 p-4">
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{stat.label}</p>
           <p className="mt-2 text-3xl font-black tracking-tight text-slate-900 tabular-nums">{displayValue}</p>
         </div>
-        <div className="rounded-2xl bg-white p-2 text-slate-700 shadow-sm">
+        <div className="shrink-0 rounded-2xl bg-white p-2 text-slate-700 shadow-sm">
           <Icon className="h-5 w-5" aria-hidden="true" />
         </div>
       </div>
@@ -72,19 +72,26 @@ const SKELETON_KEYS = ["seeds", "holes", "speed"];
 
 export function OperationStatistics({ telemetry, isLoading }: OperationStatisticsProps) {
   return (
-    <div className="dashboard-card rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
+    <div className="dashboard-card rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
       <div className="mb-5 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Operation Statistics</h2>
           <p className="mt-1 text-sm text-slate-500">Core telemetry fields used by the machine UI.</p>
         </div>
-        <FiGrid className="mt-1 h-5 w-5 text-slate-400" aria-hidden="true" />
+        <FiGrid className="mt-1 h-5 w-5 shrink-0 text-slate-400" aria-hidden="true" />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        {isLoading || !telemetry
-          ? SKELETON_KEYS.map((key) => <StatCardSkeleton key={key} />)
-          : buildStats(telemetry).map((stat) => <StatCard key={stat.label} stat={stat} />)}
+      {/*
+        The number of columns depends on the width of THIS box, not of the
+        screen. In the narrow side column of a laptop screen the three cards
+        stack; when the box is at least 448px wide they sit side by side.
+      */}
+      <div className="@container">
+        <div className="grid grid-cols-1 gap-3 @md:grid-cols-3">
+          {isLoading || !telemetry
+            ? SKELETON_KEYS.map((key) => <StatCardSkeleton key={key} />)
+            : buildStats(telemetry).map((stat) => <StatCard key={stat.label} stat={stat} />)}
+        </div>
       </div>
     </div>
   );

@@ -24,7 +24,7 @@ function ControlActionButtonBase({ label, command, icon: Icon, loading, active, 
       title={`${label} (${command})`}
       aria-label={`${label} command ${command}`}
       aria-pressed={active}
-      className={`inline-flex flex-1 items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.99] ${
+      className={`inline-flex flex-1 touch-manipulation select-none items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.99] ${
         active ? "ring-2 ring-emerald-200" : ""
       }`}
     >

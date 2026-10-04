@@ -3,16 +3,50 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
 import { TopNavbar } from "@/components/dashboard/TopNavbar";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
-type CapturedPhoto = {
-  id: string;
+type SavedPhoto = {
+  id: number;
   url: string;
   timestamp: string;
+  filename: string;
+  storagePath: string;
+};
+
+type StreamState = "connecting" | "live" | "offline";
+
+/**
+ * Camera stream address.
+ *
+ * Set NEXT_PUBLIC_CAMERA_STREAM_URL in .env.local (and in your hosting
+ * settings) instead of editing the code. For a deployed (https) website
+ * the address must also be https, for example through a tunnel, because
+ * browsers block an http camera inside an https page.
+ */
+const STREAM_URL =
+  process.env.NEXT_PUBLIC_CAMERA_STREAM_URL ??
+  "http://192.168.8.140:5000/video_feed";
+
+// Supabase Storage bucket that holds the captured photos (private).
+const CAPTURE_BUCKET = "camera-captures";
+
+// How many of the newest photos are shown on the page.
+const CAPTURE_LIMIT = 24;
+
+// How long a photo link stays valid (the bucket is private).
+const SIGNED_URL_SECONDS = 60 * 60;
+
+// Static camera info
+const CAMERA_INFO = {
+  name: "Area Ahead",
+  model: "Raspberry Pi Camera Module 3",
+  shortModel: "Pi Camera v3",
 };
 
 function BackToDashboardButton() {
@@ -44,25 +78,8 @@ function BackToDashboardButton() {
   );
 }
 
-export default function CameraPage() {
-  const videoRef = useRef<HTMLImageElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  const [fps, setFps] = useState(29.8);
-  const [capturedPhotos, setCapturedPhotos] = useState<
-    CapturedPhoto[]
-  >([]);
-
-  // Static camera info — swap for live values from the ESP32/Pi endpoint when available.
-  const cameraInfo = {
-    name: "Area Ahead",
-    model: "Raspberry Pi Camera Module 3",
-    shortModel: "Pi Camera v3",
-    resolution: "1280 x 720",
-    streamUrl: "http://192.168.8.140:5000/video_feed",
-  };
-
-  const formatTimestamp = (date: Date) =>
+function formatTimestamp(date: Date) {
+  return (
     date.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -73,80 +90,455 @@ export default function CameraPage() {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
-    });
+    })
+  );
+}
 
-  const handleSnapshot = useCallback(() => {
-    const canvas = canvasRef.current;
-    const img = videoRef.current;
+function formatFilename(date: Date) {
+  const pad = (value: number, length = 2) =>
+    String(value).padStart(length, "0");
 
-    if (!canvas || !img) return;
+  return (
+    `agridrill-${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}` +
+    `-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}` +
+    `-${pad(date.getMilliseconds(), 3)}.jpg`
+  );
+}
 
-    const ctx = canvas.getContext("2d");
+export default function CameraPage() {
+  const router = useRouter();
 
-    if (!ctx) return;
+  const supabase = useMemo(
+    () => getSupabaseBrowserClient(),
+    []
+  );
 
-    canvas.width = img.naturalWidth || 1280;
-    canvas.height = img.naturalHeight || 720;
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-    ctx.drawImage(
-      img,
-      0,
-      0,
-      canvas.width,
-      canvas.height
-    );
+  const [streamState, setStreamState] =
+    useState<StreamState>("connecting");
 
-    canvas.toBlob((blob) => {
-      if (!blob) return;
+  // Changing this number reloads the stream (used by "Retry").
+  const [streamAttempt, setStreamAttempt] = useState(0);
 
-      const url = URL.createObjectURL(blob);
-      const now = new Date();
+  const [streamResolution, setStreamResolution] =
+    useState<string | null>(null);
 
-      setCapturedPhotos((prev) => [
-        {
-          id: `${now.getTime()}`,
-          url,
-          timestamp: formatTimestamp(now),
-        },
-        ...prev,
-      ]);
-    });
-  }, []);
+  const [savedPhotos, setSavedPhotos] = useState<
+    SavedPhoto[]
+  >([]);
 
-  const handleClearAll = useCallback(() => {
-    setCapturedPhotos((prev) => {
-      prev.forEach((photo) =>
-        URL.revokeObjectURL(photo.url)
+  const [isLoadingPhotos, setIsLoadingPhotos] =
+    useState(true);
+
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [captureError, setCaptureError] = useState<
+    string | null
+  >(null);
+
+  const streamSrc =
+    streamAttempt === 0
+      ? STREAM_URL
+      : `${STREAM_URL}${STREAM_URL.includes("?") ? "&" : "?"}retry=${streamAttempt}`;
+
+  // ============================================================
+  // LOAD THE USER'S SAVED PHOTOS
+  // ============================================================
+
+  const loadCaptures = useCallback(async () => {
+    setIsLoadingPhotos(true);
+
+    const { data: userData } =
+      await supabase.auth.getUser();
+
+    const user = userData.user;
+
+    if (!user) {
+      setSavedPhotos([]);
+      setIsLoadingPhotos(false);
+
+      return;
+    }
+
+    const { data: rows, error } = await supabase
+      .from("camera_captures")
+      .select("id, created_at, storage_path, filename")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(CAPTURE_LIMIT);
+
+    if (error) {
+      console.error(
+        "Failed to load saved photos:",
+        error
       );
 
-      return [];
+      setCaptureError("Failed to load your saved photos.");
+      setIsLoadingPhotos(false);
+
+      return;
+    }
+
+    if (!rows || rows.length === 0) {
+      setSavedPhotos([]);
+      setIsLoadingPhotos(false);
+
+      return;
+    }
+
+    // The bucket is private, so every photo needs a temporary link.
+    const { data: signedList, error: signedError } =
+      await supabase.storage
+        .from(CAPTURE_BUCKET)
+        .createSignedUrls(
+          rows.map((row) => row.storage_path),
+          SIGNED_URL_SECONDS
+        );
+
+    if (signedError || !signedList) {
+      console.error(
+        "Failed to create photo links:",
+        signedError
+      );
+
+      setCaptureError("Failed to load your saved photos.");
+      setIsLoadingPhotos(false);
+
+      return;
+    }
+
+    const urlByPath = new Map<string, string>();
+
+    signedList.forEach((item) => {
+      if (item.signedUrl && item.path) {
+        urlByPath.set(item.path, item.signedUrl);
+      }
     });
-  }, []);
 
-  const handleQuit = useCallback(() => {
-    // Placeholder for wiring up to whatever "quit" should mean in this app
-    // (e.g. router.back(), closing the stream connection, etc.)
-    console.log("Quit requested");
-  }, []);
+    setSavedPhotos(
+      rows
+        .filter((row) => urlByPath.has(row.storage_path))
+        .map((row) => ({
+          id: row.id,
+          url: urlByPath.get(row.storage_path) as string,
+          timestamp: formatTimestamp(
+            new Date(row.created_at)
+          ),
+          filename: row.filename,
+          storagePath: row.storage_path,
+        }))
+    );
 
-  // Keyboard shortcuts: C = capture, Q / Esc = quit
+    setIsLoadingPhotos(false);
+  }, [supabase]);
+
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
+    void loadCaptures();
+  }, [loadCaptures]);
 
+  // ============================================================
+  // STREAM EVENTS
+  // ============================================================
+
+  const handleStreamLoad = useCallback(() => {
+    const image = imageRef.current;
+
+    setStreamState("live");
+    setCaptureError(null);
+
+    if (image && image.naturalWidth > 0) {
+      setStreamResolution(
+        `${image.naturalWidth} x ${image.naturalHeight}`
+      );
+    }
+  }, []);
+
+  const handleStreamError = useCallback(() => {
+    console.warn("Camera feed unavailable");
+
+    setStreamState("offline");
+    setStreamResolution(null);
+  }, []);
+
+  const handleRetry = useCallback(() => {
+    setStreamState("connecting");
+    setCaptureError(null);
+    setStreamAttempt((attempt) => attempt + 1);
+  }, []);
+
+  // ============================================================
+  // SAVE A CAPTURE (Storage file + database row)
+  // ============================================================
+
+  const saveCapture = useCallback(
+    async (
+      blob: Blob,
+      width: number,
+      height: number,
+      now: Date
+    ): Promise<SavedPhoto> => {
+      const { data: userData, error: userError } =
+        await supabase.auth.getUser();
+
+      if (userError || !userData.user) {
+        throw new Error("Not signed in");
+      }
+
+      const user = userData.user;
+
+      const filename = formatFilename(now);
+
+      // Every user has their own folder: <user id>/<file name>
+      const storagePath = `${user.id}/${filename}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(CAPTURE_BUCKET)
+        .upload(storagePath, blob, {
+          contentType: "image/jpeg",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Link the photo to the user's running operation, if there is one.
+      const { data: runningSession } = await supabase
+        .from("operation_sessions")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("status", "running")
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const { data: row, error: insertError } =
+        await supabase
+          .from("camera_captures")
+          .insert({
+            user_id: user.id,
+            operation_session_id: runningSession?.id ?? null,
+            storage_path: storagePath,
+            filename,
+            width,
+            height,
+            size_bytes: blob.size,
+          })
+          .select("id, created_at")
+          .single();
+
+      if (insertError) {
+        // Do not leave a file behind without a database record.
+        await supabase.storage
+          .from(CAPTURE_BUCKET)
+          .remove([storagePath]);
+
+        throw insertError;
+      }
+
+      const { data: signed, error: signedError } =
+        await supabase.storage
+          .from(CAPTURE_BUCKET)
+          .createSignedUrl(storagePath, SIGNED_URL_SECONDS);
+
+      if (signedError || !signed) {
+        throw signedError ?? new Error("No photo link");
+      }
+
+      return {
+        id: row.id,
+        url: signed.signedUrl,
+        timestamp: formatTimestamp(new Date(row.created_at)),
+        filename,
+        storagePath,
+      };
+    },
+    [supabase]
+  );
+
+  // ============================================================
+  // CAPTURE BUTTON
+  // ============================================================
+
+  const handleSnapshot = useCallback(async () => {
+    const canvas = canvasRef.current;
+    const image = imageRef.current;
+
+    if (!canvas || !image || isSaving) return;
+
+    // Do not save a blank picture when the camera is not showing video.
+    if (streamState !== "live" || !image.naturalWidth) {
+      setCaptureError(
+        "The camera is not live yet, so a photo cannot be captured."
+      );
+
+      return;
+    }
+
+    const context = canvas.getContext("2d");
+
+    if (!context) return;
+
+    const width = image.naturalWidth;
+    const height = image.naturalHeight;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    let blob: Blob | null = null;
+
+    try {
+      context.drawImage(image, 0, 0, width, height);
+
+      // toBlob throws a SecurityError when the camera server does not
+      // allow cross-origin access (CORS), so it must be inside try.
+      blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, "image/jpeg", 0.92);
+      });
+    } catch (error) {
+      console.error("Snapshot failed:", error);
+
+      setCaptureError(
+        "Unable to capture the photo. The camera server must allow cross-origin access (CORS)."
+      );
+
+      return;
+    }
+
+    if (!blob) {
+      setCaptureError("Failed to create the photo.");
+
+      return;
+    }
+
+    setIsSaving(true);
+    setCaptureError(null);
+
+    try {
+      const saved = await saveCapture(
+        blob,
+        width,
+        height,
+        new Date()
+      );
+
+      setSavedPhotos((previous) =>
+        [saved, ...previous].slice(0, CAPTURE_LIMIT)
+      );
+    } catch (error) {
+      console.error("Failed to save capture:", error);
+
+      setCaptureError(
+        "The photo was captured but could not be saved. Please try again."
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }, [streamState, isSaving, saveCapture]);
+
+  // ============================================================
+  // DOWNLOAD / DELETE
+  // ============================================================
+
+  const handleDownload = useCallback(
+    async (photo: SavedPhoto) => {
+      const { data, error } = await supabase.storage
+        .from(CAPTURE_BUCKET)
+        .createSignedUrl(photo.storagePath, 60, {
+          download: photo.filename,
+        });
+
+      if (error || !data) {
+        console.error("Download failed:", error);
+
+        setCaptureError("Unable to download the photo.");
+
+        return;
+      }
+
+      window.location.href = data.signedUrl;
+    },
+    [supabase]
+  );
+
+  const handleDelete = useCallback(
+    async (photo: SavedPhoto) => {
       if (
-        target &&
-        ["INPUT", "TEXTAREA"].includes(target.tagName)
+        !window.confirm(
+          "Delete this photo permanently? This cannot be undone."
+        )
       ) {
         return;
       }
 
-      if (e.key.toLowerCase() === "c") {
-        handleSnapshot();
-      } else if (
-        e.key.toLowerCase() === "q" ||
-        e.key === "Escape"
+      const { error: storageError } = await supabase.storage
+        .from(CAPTURE_BUCKET)
+        .remove([photo.storagePath]);
+
+      if (storageError) {
+        console.error("Failed to delete file:", storageError);
+
+        setCaptureError("Unable to delete the photo.");
+
+        return;
+      }
+
+      const { error: rowError } = await supabase
+        .from("camera_captures")
+        .delete()
+        .eq("id", photo.id);
+
+      if (rowError) {
+        console.error("Failed to delete record:", rowError);
+
+        setCaptureError("Unable to delete the photo.");
+
+        return;
+      }
+
+      setSavedPhotos((previous) =>
+        previous.filter((item) => item.id !== photo.id)
+      );
+    },
+    [supabase]
+  );
+
+  const handleQuit = useCallback(() => {
+    router.push("/dashboard");
+  }, [router]);
+
+  // Keyboard shortcuts: C = capture, Q / Esc = quit
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      // Do not react to Ctrl+C (copy), Cmd+C, or a held-down key.
+      if (
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        event.repeat
       ) {
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+
+      if (
+        target &&
+        (["INPUT", "TEXTAREA", "SELECT"].includes(
+          target.tagName
+        ) ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+
+      if (key === "c") {
+        void handleSnapshot();
+      } else if (key === "q" || event.key === "Escape") {
         handleQuit();
       }
     };
@@ -154,21 +546,8 @@ export default function CameraPage() {
     window.addEventListener("keydown", onKeyDown);
 
     return () =>
-      window.removeEventListener(
-        "keydown",
-        onKeyDown
-      );
+      window.removeEventListener("keydown", onKeyDown);
   }, [handleSnapshot, handleQuit]);
-
-  // Cleanup blob URLs on unmount
-  useEffect(() => {
-    return () => {
-      capturedPhotos.forEach((photo) =>
-        URL.revokeObjectURL(photo.url)
-      );
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return (
     <>
@@ -193,40 +572,70 @@ export default function CameraPage() {
 
                   <div>
                     <h2 className="text-base font-bold uppercase tracking-wide text-white">
-                      {cameraInfo.name}
+                      {CAMERA_INFO.name}
                     </h2>
 
                     <p className="text-xs text-[#94a3b8]">
-                      {cameraInfo.model}
+                      {CAMERA_INFO.model}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-1">
-                  <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#4ade80]">
-                    <span className="h-2 w-2 rounded-full bg-[#22c55e] shadow-[0_0_8px_rgba(34,197,94,0.7)]" />
-                    Live
-                  </span>
-
-                  <span className="text-xs text-[#94a3b8]">
-                    FPS: {fps.toFixed(1)}
-                  </span>
-                </div>
+                <StatusBadge state={streamState} />
               </div>
 
               <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-[#1f2937] bg-black">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  ref={videoRef}
-                  src={cameraInfo.streamUrl}
+                  ref={imageRef}
+                  src={streamSrc}
                   alt="Live camera feed"
+                  crossOrigin="anonymous"
                   className="h-full w-full object-cover"
-                  onError={() =>
-                    console.warn(
-                      "Camera feed unavailable"
-                    )
-                  }
+                  onLoad={handleStreamLoad}
+                  onError={handleStreamError}
                 />
+
+                {streamState !== "live" && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 px-4 text-center">
+                    {streamState === "connecting" ? (
+                      <p className="text-sm text-[#cbd5e1]">
+                        Connecting to the camera...
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-sm font-semibold text-[#fca5a5]">
+                          Camera feed unavailable
+                        </p>
+
+                        <p className="max-w-sm text-xs text-[#94a3b8]">
+                          Check that the Raspberry Pi is
+                          powered on, the camera server is
+                          running, and you are on the same
+                          network.
+                        </p>
+
+                        <button
+                          type="button"
+                          onClick={handleRetry}
+                          className="rounded-lg bg-[#22c55e] px-4 py-2 text-xs font-bold text-[#052e16] transition hover:bg-[#4ade80]"
+                        >
+                          Retry
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
+
+              {captureError && (
+                <p
+                  role="alert"
+                  className="mt-3 rounded-lg border border-red-900 bg-red-950/60 px-3 py-2 text-xs text-[#fca5a5]"
+                >
+                  {captureError}
+                </p>
+              )}
 
               <canvas
                 ref={canvasRef}
@@ -250,45 +659,51 @@ export default function CameraPage() {
                       </p>
 
                       <p className="text-xs text-[#86efac]/80">
-                        {cameraInfo.name} (
-                        {cameraInfo.shortModel})
+                        {CAMERA_INFO.name} (
+                        {CAMERA_INFO.shortModel})
                       </p>
                     </div>
                   </div>
 
-                  <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#4ade80]">
-                    <span className="h-2 w-2 rounded-full bg-[#22c55e] shadow-[0_0_8px_rgba(34,197,94,0.7)]" />
-                    Live
-                  </span>
+                  <StatusBadge state={streamState} />
                 </div>
 
                 <div className="mt-4 grid grid-cols-3 gap-2">
                   <StatBox
                     label="Resolution"
-                    value={cameraInfo.resolution}
+                    value={streamResolution ?? "—"}
                     icon="📐"
                   />
 
                   <StatBox
-                    label="FPS"
-                    value={fps.toFixed(1)}
-                    icon="⏱️"
+                    label="Status"
+                    value={
+                      streamState === "live"
+                        ? "Live"
+                        : streamState === "connecting"
+                          ? "Connecting"
+                          : "Offline"
+                    }
+                    icon="📡"
                   />
 
                   <StatBox
                     label="Camera"
-                    value={cameraInfo.shortModel}
+                    value={CAMERA_INFO.shortModel}
                     icon="🔧"
                   />
                 </div>
 
                 <button
                   type="button"
-                  onClick={handleSnapshot}
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#22c55e] px-4 py-3 text-sm font-bold text-[#052e16] transition hover:bg-[#4ade80] active:scale-[0.98]"
+                  onClick={() => void handleSnapshot()}
+                  disabled={
+                    streamState !== "live" || isSaving
+                  }
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#22c55e] px-4 py-3 text-sm font-bold text-[#052e16] transition hover:bg-[#4ade80] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <span>📷</span>
-                  Capture Photo
+                  {isSaving ? "Saving..." : "Capture Photo"}
                 </button>
               </div>
 
@@ -306,81 +721,142 @@ export default function CameraPage() {
 
                   <KeyHint
                     keyLabel="Q"
-                    description="Quit"
+                    description="Back to Dashboard"
                   />
 
                   <KeyHint
                     keyLabel="ESC"
-                    description="Quit"
+                    description="Back to Dashboard"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ── CAPTURED PHOTOS ── */}
+          {/* ── SAVED PHOTOS ── */}
           <div className="mt-4 rounded-2xl border border-[#1f2937] bg-[#0b1220] p-4">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-lg">
-                  🖼️
-                </span>
+                <span className="text-lg">🖼️</span>
 
                 <h3 className="text-sm font-bold uppercase tracking-wide text-white">
                   Captured Photos
                 </h3>
               </div>
 
-              <button
-                type="button"
-                onClick={handleClearAll}
-                disabled={
-                  capturedPhotos.length === 0
-                }
-                className="flex items-center gap-1.5 rounded-lg border border-[#334155] bg-[#111827] px-3 py-1.5 text-xs font-semibold text-[#cbd5e1] transition hover:border-[#f87171] hover:text-[#f87171] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                🗑️ Clear All
-              </button>
+              {!isLoadingPhotos && (
+                <span className="text-xs text-[#94a3b8]">
+                  {savedPhotos.length} saved
+                </span>
+              )}
             </div>
 
-            {capturedPhotos.length === 0 ? (
+            {isLoadingPhotos ? (
               <p className="py-6 text-center text-xs text-[#64748b]">
-                No photos captured yet. Press{" "}
+                Loading your saved photos...
+              </p>
+            ) : savedPhotos.length === 0 ? (
+              <p className="py-6 text-center text-xs text-[#64748b]">
+                No photos saved yet. Press{" "}
                 <span className="font-semibold text-[#cbd5e1]">
                   C
                 </span>{" "}
                 or the Capture Photo button.
               </p>
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {capturedPhotos.map((photo) => (
-                  <div
-                    key={photo.id}
-                    className="overflow-hidden rounded-xl border border-[#1f2937] bg-black"
-                  >
-                    <img
-                      src={photo.url}
-                      alt={`Captured ${photo.timestamp}`}
-                      className="aspect-video w-full object-cover"
-                    />
+              <>
+                <p className="mb-3 text-[11px] text-[#64748b]">
+                  Photos are saved to your account. Only you
+                  can see them. The newest {CAPTURE_LIMIT} are
+                  shown.
+                </p>
 
-                    <div className="flex items-center gap-1.5 bg-[#0b1220] px-2 py-1.5">
-                      <span className="text-xs">
-                        📷
-                      </span>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {savedPhotos.map((photo) => (
+                    <div
+                      key={photo.id}
+                      className="overflow-hidden rounded-xl border border-[#1f2937] bg-black"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={photo.url}
+                        alt={`Captured ${photo.timestamp}`}
+                        className="aspect-video w-full object-cover"
+                      />
 
-                      <span className="text-[11px] text-[#94a3b8]">
-                        {photo.timestamp}
-                      </span>
+                      <div className="bg-[#0b1220] px-2 py-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs">
+                            📷
+                          </span>
+
+                          <span className="truncate text-[11px] text-[#94a3b8]">
+                            {photo.timestamp}
+                          </span>
+                        </div>
+
+                        <div className="mt-1.5 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleDownload(photo)
+                            }
+                            className="flex-1 rounded-md border border-[#334155] bg-[#111827] px-2 py-1 text-[11px] font-semibold text-[#cbd5e1] transition hover:border-[#22c55e] hover:text-[#4ade80]"
+                          >
+                            Download
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleDelete(photo)
+                            }
+                            className="flex-1 rounded-md border border-[#334155] bg-[#111827] px-2 py-1 text-[11px] font-semibold text-[#cbd5e1] transition hover:border-[#f87171] hover:text-[#f87171]"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
       </main>
     </>
+  );
+}
+
+function StatusBadge({ state }: { state: StreamState }) {
+  const config = {
+    live: {
+      label: "Live",
+      text: "text-[#4ade80]",
+      dot: "bg-[#22c55e] shadow-[0_0_8px_rgba(34,197,94,0.7)]",
+    },
+    connecting: {
+      label: "Connecting",
+      text: "text-[#fbbf24]",
+      dot: "bg-[#f59e0b]",
+    },
+    offline: {
+      label: "Offline",
+      text: "text-[#f87171]",
+      dot: "bg-[#ef4444]",
+    },
+  }[state];
+
+  return (
+    <span
+      className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest ${config.text}`}
+    >
+      <span
+        className={`h-2 w-2 rounded-full ${config.dot}`}
+      />
+      {config.label}
+    </span>
   );
 }
 

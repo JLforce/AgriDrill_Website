@@ -42,8 +42,15 @@ body {
   transition: transform 220ms ease, box-shadow 220ms ease;
 }
 
-.dashboard-card:hover {
-  transform: translateY(-3px);
+/*
+  Lift the card on hover only on devices that really have a mouse.
+  On touch screens a tap would otherwise leave the card "stuck" in the
+  lifted position.
+*/
+@media (hover: hover) {
+  .dashboard-card:hover {
+    transform: translateY(-3px);
+  }
 }
 
 .dashboard-card:nth-child(2) {

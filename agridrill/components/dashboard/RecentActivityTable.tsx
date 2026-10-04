@@ -32,9 +32,44 @@ function TableSkeleton() {
   );
 }
 
+/** Phone layout: one small card per reading, no sideways scrolling. */
+function ActivityCard({ row }: { row: ActivityRecord }) {
+  const values = [
+    { label: "Seeds", value: row.seed_count },
+    { label: "Holes", value: row.hole_count },
+    { label: "Speed", value: row.drive_speed },
+  ];
+
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+      <p className="text-sm font-semibold text-slate-900">{row.time}</p>
+
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">IR1</span>
+          <StatusBadge value={row.ir1} />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">IR4</span>
+          <StatusBadge value={row.ir4} />
+        </div>
+      </div>
+
+      <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+        {values.map((item) => (
+          <div key={item.label} className="rounded-xl bg-white px-2 py-2">
+            <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{item.label}</dt>
+            <dd className="mt-0.5 text-sm font-semibold tabular-nums text-slate-900">{item.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </article>
+  );
+}
+
 export function RecentActivityTable({ activity, isLoading }: RecentActivityTableProps) {
   return (
-    <section className="dashboard-card rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
+    <section className="dashboard-card rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
       <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Recent Activity</h2>
@@ -46,40 +81,50 @@ export function RecentActivityTable({ activity, isLoading }: RecentActivityTable
       {isLoading ? (
         <TableSkeleton />
       ) : activity.length > 0 ? (
-        <div className="max-h-96 overflow-auto rounded-2xl">
-          <table className="min-w-225 w-full border-separate border-spacing-y-2 text-left">
-            <thead className="sticky top-0 z-10 bg-white">
-              <tr className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                {COLUMN_HEADERS.map((header) => (
-                  <th key={header} className="bg-white px-3 py-2">
-                    {header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {activity.map((row, index) => (
-                <tr
-                  key={`${row.time}-${row.drive_speed}-${index}`}
-                  className={`rounded-2xl text-sm text-slate-700 transition hover:bg-emerald-50 ${
-                    index % 2 === 0 ? "bg-slate-50" : "bg-white"
-                  }`}
-                >
-                  <td className="rounded-l-2xl px-3 py-3 font-semibold text-slate-900">{row.time}</td>
-                  <td className="px-3 py-3">
-                    <StatusBadge value={row.ir1} />
-                  </td>
-                  <td className="px-3 py-3">
-                    <StatusBadge value={row.ir4} />
-                  </td>
-                  <td className="px-3 py-3 tabular-nums">{row.seed_count}</td>
-                  <td className="px-3 py-3 tabular-nums">{row.hole_count}</td>
-                  <td className="rounded-r-2xl px-3 py-3 tabular-nums">{row.drive_speed}</td>
+        <>
+          {/* Phones (under 768px): cards */}
+          <div className="max-h-96 space-y-2 overflow-y-auto md:hidden">
+            {activity.map((row, index) => (
+              <ActivityCard key={`${row.time}-${row.drive_speed}-${index}`} row={row} />
+            ))}
+          </div>
+
+          {/* Tablets and larger (768px and up): table */}
+          <div className="hidden max-h-96 overflow-auto rounded-2xl md:block">
+            <table className="min-w-150 w-full border-separate border-spacing-y-2 text-left">
+              <thead className="sticky top-0 z-10 bg-white">
+                <tr className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                  {COLUMN_HEADERS.map((header) => (
+                    <th key={header} className="bg-white px-3 py-2">
+                      {header}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {activity.map((row, index) => (
+                  <tr
+                    key={`${row.time}-${row.drive_speed}-${index}`}
+                    className={`rounded-2xl text-sm text-slate-700 transition hover:bg-emerald-50 ${
+                      index % 2 === 0 ? "bg-slate-50" : "bg-white"
+                    }`}
+                  >
+                    <td className="rounded-l-2xl px-3 py-3 font-semibold text-slate-900">{row.time}</td>
+                    <td className="px-3 py-3">
+                      <StatusBadge value={row.ir1} />
+                    </td>
+                    <td className="px-3 py-3">
+                      <StatusBadge value={row.ir4} />
+                    </td>
+                    <td className="px-3 py-3 tabular-nums">{row.seed_count}</td>
+                    <td className="px-3 py-3 tabular-nums">{row.hole_count}</td>
+                    <td className="rounded-r-2xl px-3 py-3 tabular-nums">{row.drive_speed}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       ) : (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
           No telemetry received yet.

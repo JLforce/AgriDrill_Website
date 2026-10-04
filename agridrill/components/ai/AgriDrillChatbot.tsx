@@ -4,6 +4,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
 } from "react";
@@ -115,6 +116,14 @@ export default function AgriDrillChatbot() {
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // The part of the screen that is really visible. On phones the on-screen
+  // keyboard shrinks it, so the chat sheet follows it and the text box is
+  // never hidden behind the keyboard.
+  const [viewportBox, setViewportBox] = useState<{
+    height: number;
+    offsetTop: number;
+  } | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -133,14 +142,53 @@ export default function AgriDrillChatbot() {
   }, [messages, isTyping]);
 
   useEffect(() => {
-    if (isOpen) {
-      const timer = setTimeout(
-        () => textareaRef.current?.focus(),
-        250
-      );
+    if (!isOpen) return;
 
-      return () => clearTimeout(timer);
+    // On touch screens, focusing the text box right away would pop up the
+    // keyboard and hide the quick questions. Let the user tap it instead.
+    if (window.matchMedia("(hover: none)").matches) return;
+
+    const timer = setTimeout(
+      () => textareaRef.current?.focus(),
+      250
+    );
+
+    return () => clearTimeout(timer);
+  }, [isOpen]);
+
+  // While the chat is open on a phone: lock the page behind it and keep the
+  // sheet the same size as the visible screen (shrinks with the keyboard).
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const viewport = window.visualViewport;
+    const phoneScreen = window.matchMedia("(max-width: 639px)");
+    const previousOverflow = document.body.style.overflow;
+
+    if (phoneScreen.matches) {
+      document.body.style.overflow = "hidden";
     }
+
+    const updateViewport = () => {
+      if (!viewport) return;
+
+      setViewportBox({
+        height: viewport.height,
+        offsetTop: viewport.offsetTop,
+      });
+    };
+
+    updateViewport();
+
+    viewport?.addEventListener("resize", updateViewport);
+    viewport?.addEventListener("scroll", updateViewport);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      viewport?.removeEventListener("resize", updateViewport);
+      viewport?.removeEventListener("scroll", updateViewport);
+      setViewportBox(null);
+    };
   }, [isOpen]);
 
   // Cleanup active AI request when the component is unmounted.
@@ -366,8 +414,7 @@ export default function AgriDrillChatbot() {
         ...current,
         assistantMessage,
       ]);
-
-        } catch (error) {
+    } catch (error) {
       // Deliberate cancellation should not show an error.
       if (
         error instanceof DOMException &&
@@ -383,19 +430,16 @@ export default function AgriDrillChatbot() {
         return;
       }
 
-      // Restore the user's text so they don't have to retype it
-      // after a genuine failure (not a cancellation, not stale).
-      setInput(text);
-
       console.error("AgriDrill AI error:", error);
 
+      // Restore the user's text so they don't have to retype it
+      // after a genuine failure (not a cancellation, not stale).
       setInput(text);
 
       setError(
         "AgriDrill AI is temporarily unavailable. Please try again."
       );
     } finally {
-
       // Only clear the active controller if it is still
       // the controller belonging to this request.
       if (abortControllerRef.current === controller) {
@@ -421,21 +465,34 @@ export default function AgriDrillChatbot() {
     }
   };
 
+  const viewportStyle = viewportBox
+    ? ({
+        "--vv-height": `${viewportBox.height}px`,
+        "--vv-top": `${viewportBox.offsetTop}px`,
+      } as CSSProperties)
+    : undefined;
+
   return (
     <>
       <div className="pointer-events-none fixed inset-0 z-[9000]">
+        {/*
+          Phones (under 640px): the chat is a full-screen sheet that follows
+          the visible screen height, so the keyboard never covers the text box.
+          Tablets and larger: the floating window above the chat button.
+        */}
         <div
-          className={`pointer-events-auto absolute bottom-[92px] right-4 w-[calc(100vw-2rem)] max-w-[430px] origin-bottom-right transition-all duration-300 sm:right-6 ${
+          style={viewportStyle}
+          className={`pointer-events-auto fixed inset-x-0 top-[var(--vv-top,0px)] h-[var(--vv-height,100dvh)] w-full origin-bottom transition-all duration-300 sm:absolute sm:inset-x-auto sm:bottom-[92px] sm:right-6 sm:top-auto sm:h-auto sm:w-[calc(100vw-2rem)] sm:max-w-[430px] sm:origin-bottom-right ${
             isOpen
               ? "translate-y-0 scale-100 opacity-100"
               : "pointer-events-none translate-y-5 scale-95 opacity-0"
           }`}
         >
-          <div className="relative overflow-hidden rounded-[28px] border border-white/60 bg-white/90 shadow-[0_25px_80px_rgba(15,23,42,0.25)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/90">
+          <div className="relative flex h-full min-h-0 flex-col overflow-hidden border-0 bg-white/90 shadow-[0_25px_80px_rgba(15,23,42,0.25)] backdrop-blur-2xl dark:bg-slate-950/90 sm:h-auto sm:max-h-[calc(100dvh-7rem)] sm:rounded-[28px] sm:border sm:border-white/60 sm:dark:border-white/10">
             <div className="pointer-events-none absolute -left-16 -top-16 h-40 w-40 rounded-full bg-emerald-400/20 blur-3xl" />
             <div className="pointer-events-none absolute -right-16 top-24 h-40 w-40 rounded-full bg-cyan-400/20 blur-3xl" />
 
-            <div className="relative overflow-hidden px-5 pb-5 pt-5">
+            <div className="relative shrink-0 overflow-hidden px-5 pb-5 pt-5">
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500" />
 
               <div className="pointer-events-none absolute inset-0 opacity-30">
@@ -511,7 +568,7 @@ export default function AgriDrillChatbot() {
                       onClick={startNewChat}
                       aria-label="Start a new chat"
                       title="New chat"
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white/80 backdrop-blur transition hover:bg-white/20 hover:text-white"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white/80 backdrop-blur transition hover:bg-white/20 hover:text-white sm:h-9 sm:w-9"
                     >
                       <svg
                         className="h-4 w-4"
@@ -533,7 +590,7 @@ export default function AgriDrillChatbot() {
                       type="button"
                       onClick={() => setIsOpen(false)}
                       aria-label="Close AgriDrill AI"
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white/80 backdrop-blur transition hover:bg-white/20 hover:text-white"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white/80 backdrop-blur transition hover:bg-white/20 hover:text-white sm:h-9 sm:w-9"
                     >
                       <svg
                         className="h-4 w-4"
@@ -552,7 +609,8 @@ export default function AgriDrillChatbot() {
                   </div>
                 </div>
 
-                <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 backdrop-blur-md">
+                {/* Hidden on very short screens (phones turned sideways) to leave room for the chat */}
+                <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 backdrop-blur-md [@media(max-height:520px)]:hidden">
                   <span className="relative flex h-2 w-2">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-200 opacity-75" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
@@ -565,8 +623,8 @@ export default function AgriDrillChatbot() {
               </div>
             </div>
 
-            <div className="relative flex h-[430px] min-h-0 flex-col">
-              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 [scrollbar-width:thin]">
+            <div className="relative flex min-h-0 flex-1 flex-col sm:h-[430px] sm:flex-initial">
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-4 py-4 [scrollbar-width:thin]">
                 {error && (
                   <div className="mb-4 animate-[messageIn_0.3s_ease-out] rounded-2xl border border-red-200 bg-red-50 p-3 dark:border-red-900/50 dark:bg-red-950/30">
                     <div className="flex items-start gap-3">
@@ -846,6 +904,7 @@ export default function AgriDrillChatbot() {
 
               <div className="shrink-0 border-t border-slate-200/80 bg-white/80 p-3 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/70">
                 <div className="group relative flex items-end gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2 transition focus-within:border-emerald-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-emerald-500/10 dark:border-slate-800 dark:bg-slate-900 dark:focus-within:border-emerald-700 dark:focus-within:bg-slate-900">
+                  {/* 16px on phones: smaller text makes iPhones zoom the page when the box is tapped */}
                   <textarea
                     ref={textareaRef}
                     value={input}
@@ -860,7 +919,7 @@ export default function AgriDrillChatbot() {
                         : "Ask AgriDrill AI..."
                     }
                     aria-label="Ask AgriDrill AI"
-                    className="max-h-24 min-h-11 flex-1 resize-none border-0 bg-transparent px-2 py-2.5 text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-white"
+                    className="max-h-24 min-h-11 flex-1 resize-none border-0 bg-transparent px-2 py-2.5 text-base text-slate-700 outline-none placeholder:text-slate-400 dark:text-white sm:text-sm"
                   />
 
                   <button
@@ -892,7 +951,7 @@ export default function AgriDrillChatbot() {
                 </div>
 
                 <div className="mt-2 flex items-center justify-between px-1">
-                  <span className="text-[10px] text-slate-400">
+                  <span className="hidden text-[10px] text-slate-400 sm:inline">
                     Enter to send · Shift + Enter for new line
                   </span>
 
@@ -905,7 +964,12 @@ export default function AgriDrillChatbot() {
           </div>
         </div>
 
-        <div className="pointer-events-auto absolute bottom-5 right-4 sm:right-6">
+        {/* Chat button. Hidden while the full-screen sheet is open on a phone. */}
+        <div
+          className={`pointer-events-auto absolute bottom-5 right-4 sm:right-6 ${
+            isOpen ? "max-sm:hidden" : ""
+          }`}
+        >
           <div
             className={`absolute inset-[-10px] rounded-full bg-gradient-to-r from-emerald-400/30 via-cyan-400/30 to-violet-400/30 blur-xl transition-opacity duration-300 ${
               isOpen
@@ -928,7 +992,7 @@ export default function AgriDrillChatbot() {
                 ? "Close AgriDrill AI"
                 : "Open AgriDrill AI"
             }
-            className={`relative flex h-[62px] w-[62px] items-center justify-center rounded-full border border-white/20 shadow-[0_12px_35px_rgba(15,23,42,0.25)] backdrop-blur-xl transition-all duration-300 ${
+            className={`relative flex h-14 w-14 items-center justify-center rounded-full border border-white/20 shadow-[0_12px_35px_rgba(15,23,42,0.25)] backdrop-blur-xl transition-all duration-300 sm:h-[62px] sm:w-[62px] ${
               isOpen
                 ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
                 : "bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white hover:-translate-y-1 hover:scale-105"

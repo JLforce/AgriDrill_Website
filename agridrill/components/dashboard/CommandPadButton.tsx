@@ -31,7 +31,7 @@ function CommandPadButtonBase({ label, command, icon: Icon, loading, active, ton
       title={`${label} (${command})`}
       aria-label={`${label} command ${command}`}
       aria-pressed={active}
-      className={`inline-flex h-20 w-20 items-center justify-center rounded-3xl border text-center shadow-sm transition duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 sm:h-24 sm:w-24 ${TONE_CLASSES[tone]} ${
+      className={`inline-flex h-20 w-20 touch-manipulation select-none items-center justify-center rounded-3xl border text-center shadow-sm transition duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 sm:h-24 sm:w-24 ${TONE_CLASSES[tone]} ${
         active ? "ring-2 ring-slate-300 ring-offset-2" : ""
       }`}
     >

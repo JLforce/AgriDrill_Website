@@ -13,13 +13,14 @@ interface SensorGridProps {
 
 export function SensorGrid({ telemetry, lastUpdatedIso, hasTelemetry }: SensorGridProps) {
   return (
-    <div className="dashboard-card rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
-      <div className="mb-5 flex items-start justify-between gap-4">
+    <div className="dashboard-card rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
+      {/* On phones the badge moves under the title instead of squeezing it */}
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Live Sensor Monitoring</h2>
           <p className="mt-1 text-sm text-slate-500">Real-time sensor data received from the AgriDrill machine.</p>
         </div>
-        <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+        <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
           <FiShield className="h-3.5 w-3.5" aria-hidden="true" />
           IR Status
         </span>

@@ -10,6 +10,15 @@ interface MetricsGridProps {
   readonly isLoading: boolean;
 }
 
+/**
+ * Phones (under 640px): 1 column
+ * Tablets (640px - 1279px): 2 columns, the third card spans the full row
+ *   so there is no lonely half-width card
+ * Large screens (1280px and up): 3 columns
+ */
+const GRID_CLASSES =
+  "grid gap-4 sm:grid-cols-2 xl:grid-cols-3 sm:[&>*:last-child]:col-span-2 xl:[&>*:last-child]:col-span-1";
+
 function buildMetricCards(telemetry: MachineTelemetry, connectionState: ConnectionState): MetricCardData[] {
   const isOnline = connectionState !== "offline";
 
@@ -45,7 +54,7 @@ const SKELETON_KEYS = ["status", "seeds", "holes"];
 export function MetricsGrid({ telemetry, connectionState, isLoading }: MetricsGridProps) {
   if (isLoading || !telemetry) {
     return (
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <section className={GRID_CLASSES}>
         {SKELETON_KEYS.map((key) => (
           <MetricCard
             key={key}
@@ -60,7 +69,7 @@ export function MetricsGrid({ telemetry, connectionState, isLoading }: MetricsGr
   const cards = buildMetricCards(telemetry, connectionState);
 
   return (
-    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <section className={GRID_CLASSES}>
       {cards.map((card) => (
         <MetricCard key={card.title} card={card} />
       ))}
