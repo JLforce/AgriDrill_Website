@@ -15,6 +15,9 @@ const SUPABASE_SERVICE_ROLE_KEY =
 
 const MQTT_TOPIC = "agridrill/control";
 
+// The single row in machine_status that describes the machine
+const MACHINE_STATUS_ID = 1;
+
 // Commands allowed by the AgriDrill ESP32 firmware
 const ALLOWED_COMMANDS = ["F", "B", "L", "R", "S", "D"] as const;
 
@@ -31,6 +34,11 @@ const COMMAND_LABELS: Record<AllowedCommand, string> = {
   S: "Stop",
 };
 
+const MACHINE_BUSY_MESSAGE =
+  "The machine is currently being operated by another user.";
+
+// Service role client: used only on the server and bypasses
+// Row Level Security. Never expose this key to the browser.
 const supabase =
   SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
     ? createClient(
@@ -38,6 +46,13 @@ const supabase =
         SUPABASE_SERVICE_ROLE_KEY
       )
     : null;
+
+// ============================================================
+// MACHINE COUNTERS
+// The seed and hole counters belong to the machine itself, so
+// the latest telemetry row (from any session) is used for the
+// start and end counts of a session.
+// ============================================================
 
 async function getLatestTelemetry() {
   if (!supabase) {
@@ -72,115 +87,192 @@ async function getLatestTelemetry() {
   };
 }
 
-async function createOperationSession() {
+// ============================================================
+// MACHINE OWNERSHIP
+//
+// machine_status.active_session_id says which operation session
+// currently "owns" the machine. That session belongs to one user.
+// ============================================================
+
+type MachineOwner = {
+  sessionId: number;
+  userId: string | null;
+};
+
+/** Frees the machine, but only if the given session still owns it. */
+async function releaseMachine(sessionId: number) {
   if (!supabase) {
-    throw new Error(
-      "Supabase server configuration is missing"
-    );
+    return;
   }
 
-  const { data: existingSession, error: existingError } =
-    await supabase
-      .from("operation_sessions")
-      .select("id")
-      .eq("status", "running")
-      .order("started_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-  if (existingError) {
-    throw new Error(
-      `Failed to check active operation session: ${existingError.message}`
-    );
-  }
-
-  if (existingSession) {
-    console.log(
-      `Operation session already running: ${existingSession.id}`
-    );
-
-    return existingSession.id;
-  }
-
-  const telemetry = await getLatestTelemetry();
-
-  const { data, error } = await supabase
-    .from("operation_sessions")
-    .insert({
-      started_at: new Date().toISOString(),
-      start_seed_count: telemetry.seedCount,
-      start_hole_count: telemetry.holeCount,
-      status: "running",
-    })
-    .select("id")
-    .single();
-
-  if (error) {
-    throw new Error(
-      `Failed to create operation session: ${error.message}`
-    );
-  }
-
-  console.log(
-    `Operation session created: ${data.id}`
-  );
-
-  return data.id;
-}
-
-async function getRunningOperationSessionId() {
-  if (!supabase) {
-    return null;
-  }
-
-  const { data, error } = await supabase
-    .from("operation_sessions")
-    .select("id")
-    .eq("status", "running")
-    .order("started_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const { error } = await supabase
+    .from("machine_status")
+    .update({ active_session_id: null })
+    .eq("id", MACHINE_STATUS_ID)
+    .eq("active_session_id", sessionId);
 
   if (error) {
     console.error(
-      "Failed to find running operation session:",
+      "Failed to release the machine:",
       error
     );
-
-    return null;
   }
-
-  return data?.id ?? null;
 }
 
-async function finishOperationSession() {
+/**
+ * Returns who currently operates the machine, or null if it is free.
+ * A leftover pointer to a session that is no longer running is
+ * cleaned up automatically.
+ */
+async function getMachineOwner(): Promise<MachineOwner | null> {
   if (!supabase) {
     throw new Error(
       "Supabase server configuration is missing"
     );
   }
 
-  const { data: activeSession, error: sessionError } =
+  const { data: status, error: statusError } =
+    await supabase
+      .from("machine_status")
+      .select("active_session_id")
+      .eq("id", MACHINE_STATUS_ID)
+      .single();
+
+  if (statusError) {
+    throw new Error(
+      `Failed to read machine status: ${statusError.message}`
+    );
+  }
+
+  const sessionId = status?.active_session_id as
+    | number
+    | null
+    | undefined;
+
+  if (!sessionId) {
+    return null;
+  }
+
+  const { data: session, error: sessionError } =
     await supabase
       .from("operation_sessions")
-      .select("id")
-      .eq("status", "running")
-      .order("started_at", { ascending: false })
-      .limit(1)
+      .select("id, user_id, status")
+      .eq("id", sessionId)
       .maybeSingle();
 
   if (sessionError) {
     throw new Error(
-      `Failed to find active operation session: ${sessionError.message}`
+      `Failed to read operation session: ${sessionError.message}`
     );
   }
 
-  if (!activeSession) {
-    console.log(
-      "No running operation session found."
-    );
+  if (!session || session.status !== "running") {
+    // Stale pointer. Free the machine.
+    await releaseMachine(sessionId);
 
     return null;
+  }
+
+  return {
+    sessionId: session.id,
+    userId: session.user_id ?? null,
+  };
+}
+
+// ============================================================
+// OPERATION SESSIONS
+// ============================================================
+
+async function deleteOperationSession(sessionId: number) {
+  if (!supabase) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("operation_sessions")
+    .delete()
+    .eq("id", sessionId);
+
+  if (error) {
+    console.error(
+      "Failed to delete operation session:",
+      error
+    );
+  }
+}
+
+/**
+ * Creates a session for this user and claims the machine for it.
+ * The claim is atomic: it only succeeds if nobody else owns the
+ * machine at that moment. Returns null if someone else got there
+ * first.
+ */
+async function startOperationSession(
+  userId: string
+): Promise<number | null> {
+  if (!supabase) {
+    throw new Error(
+      "Supabase server configuration is missing"
+    );
+  }
+
+  const telemetry = await getLatestTelemetry();
+
+  const { data: session, error: insertError } =
+    await supabase
+      .from("operation_sessions")
+      .insert({
+        user_id: userId,
+        started_at: new Date().toISOString(),
+        start_seed_count: telemetry.seedCount,
+        start_hole_count: telemetry.holeCount,
+        status: "running",
+      })
+      .select("id")
+      .single();
+
+  if (insertError) {
+    throw new Error(
+      `Failed to create operation session: ${insertError.message}`
+    );
+  }
+
+  // Claim the machine only if it is still free.
+  const { data: claimed, error: claimError } =
+    await supabase
+      .from("machine_status")
+      .update({ active_session_id: session.id })
+      .eq("id", MACHINE_STATUS_ID)
+      .is("active_session_id", null)
+      .select("id");
+
+  if (claimError) {
+    await deleteOperationSession(session.id);
+
+    throw new Error(
+      `Failed to claim the machine: ${claimError.message}`
+    );
+  }
+
+  if (!claimed || claimed.length === 0) {
+    // Another user claimed the machine first.
+    await deleteOperationSession(session.id);
+
+    return null;
+  }
+
+  console.log(
+    `Operation session created: ${session.id} (user ${userId})`
+  );
+
+  return session.id;
+}
+
+async function finishOperationSession(sessionId: number) {
+  if (!supabase) {
+    throw new Error(
+      "Supabase server configuration is missing"
+    );
   }
 
   const telemetry = await getLatestTelemetry();
@@ -193,7 +285,7 @@ async function finishOperationSession() {
       end_hole_count: telemetry.holeCount,
       status: "completed",
     })
-    .eq("id", activeSession.id);
+    .eq("id", sessionId);
 
   if (updateError) {
     throw new Error(
@@ -201,12 +293,17 @@ async function finishOperationSession() {
     );
   }
 
-  console.log(
-    `Operation session completed: ${activeSession.id}`
-  );
+  // The machine is free again.
+  await releaseMachine(sessionId);
 
-  return activeSession.id;
+  console.log(
+    `Operation session completed: ${sessionId}`
+  );
 }
+
+// ============================================================
+// OPERATOR PROFILE
+// ============================================================
 
 async function getOperatorProfile(userId: string) {
   if (!supabase) {
@@ -239,6 +336,10 @@ async function getOperatorProfile(userId: string) {
     email: data?.email?.trim() || null,
   };
 }
+
+// ============================================================
+// COMMAND LOG
+// ============================================================
 
 async function createMachineCommandLog({
   userId,
@@ -285,6 +386,10 @@ async function createMachineCommandLog({
   }
 }
 
+// ============================================================
+// POST /api/command
+// ============================================================
+
 export async function POST(request: NextRequest) {
   let client: mqtt.MqttClient | null = null;
 
@@ -292,6 +397,13 @@ export async function POST(request: NextRequest) {
   let authenticatedUserId: string | null = null;
   let operatorName: string | null = null;
   let operatorEmail: string | null = null;
+
+  // The session this command belongs to (used for the command log).
+  let operationSessionId: number | null = null;
+
+  // A session created by THIS request that must be undone
+  // if the command cannot be delivered to the machine.
+  let rollbackSessionId: number | null = null;
 
   try {
     // ==========================================
@@ -388,6 +500,70 @@ export async function POST(request: NextRequest) {
 
     const allowedCommand =
       command as AllowedCommand;
+
+    // ==========================================
+    // MACHINE OWNERSHIP CHECK
+    // Only the user who started the current
+    // operation may control the machine.
+    // ==========================================
+
+    const owner = await getMachineOwner();
+
+    if (owner && owner.userId !== user.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: MACHINE_BUSY_MESSAGE,
+        },
+        { status: 409 }
+      );
+    }
+
+    // This user already owns the running session (if any).
+    operationSessionId = owner?.sessionId ?? null;
+
+    // ==========================================
+    // START: CREATE THE SESSION BEFORE THE MACHINE
+    // STARTS, so no telemetry is ever missed.
+    // ==========================================
+
+    if (allowedCommand === "D" && !owner) {
+      let newSessionId: number | null = null;
+
+      try {
+        newSessionId = await startOperationSession(
+          user.id
+        );
+      } catch (sessionError) {
+        console.error(
+          "Operation session start error:",
+          sessionError
+        );
+
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Failed to start the operation session",
+          },
+          { status: 500 }
+        );
+      }
+
+      if (newSessionId === null) {
+        // Someone else claimed the machine a moment ago.
+        return NextResponse.json(
+          {
+            success: false,
+            error: MACHINE_BUSY_MESSAGE,
+          },
+          { status: 409 }
+        );
+      }
+
+      operationSessionId = newSessionId;
+      rollbackSessionId = newSessionId;
+    }
 
     console.log(
       `Publishing command: ${allowedCommand}`
@@ -496,42 +672,23 @@ export async function POST(request: NextRequest) {
 
     client.end();
 
+    // The machine received the command, so the new
+    // session must be kept.
+    rollbackSessionId = null;
+
     // ==========================================
-    // OPERATION HISTORY INTEGRATION
+    // STOP: FINISH THE SESSION AND FREE THE MACHINE
     // ==========================================
 
-    let operationSessionId: number | null = null;
-
-    if (allowedCommand === "D") {
+    if (allowedCommand === "S" && owner) {
       try {
-        operationSessionId =
-          await createOperationSession();
-      } catch (sessionError) {
-        console.error(
-          "Operation session start error:",
-          sessionError
-        );
-      }
-    }
-
-    if (allowedCommand === "S") {
-      try {
-        operationSessionId =
-          await finishOperationSession();
+        await finishOperationSession(owner.sessionId);
       } catch (sessionError) {
         console.error(
           "Operation session stop error:",
           sessionError
         );
       }
-    }
-
-    if (
-      allowedCommand !== "D" &&
-      allowedCommand !== "S"
-    ) {
-      operationSessionId =
-        await getRunningOperationSessionId();
     }
 
     // ==========================================
@@ -567,6 +724,25 @@ export async function POST(request: NextRequest) {
     }
 
     // ==========================================
+    // UNDO A SESSION THAT NEVER REACHED THE MACHINE
+    // ==========================================
+
+    if (rollbackSessionId !== null) {
+      try {
+        await releaseMachine(rollbackSessionId);
+        await deleteOperationSession(rollbackSessionId);
+      } catch (rollbackError) {
+        console.error(
+          "Failed to roll back operation session:",
+          rollbackError
+        );
+      }
+
+      rollbackSessionId = null;
+      operationSessionId = null;
+    }
+
+    // ==========================================
     // FAILED COMMAND ACTIVITY LOG
     // ==========================================
 
@@ -576,9 +752,6 @@ export async function POST(request: NextRequest) {
         command as AllowedCommand
       )
     ) {
-      const operationSessionId =
-        await getRunningOperationSessionId();
-
       await createMachineCommandLog({
         userId: authenticatedUserId,
         operatorName,

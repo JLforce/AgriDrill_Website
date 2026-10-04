@@ -2,6 +2,7 @@ import AGRIDRILL_SYSTEM_INSTRUCTION from "@/lib/ai/system-instructions";
 import { NextResponse } from "next/server";
 import gemini, { GEMINI_MODEL } from "@/lib/ai/gemini";
 import { detectAIIntent } from "@/lib/ai/intent";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 import {
   getCurrentMachineStatus,
   getLatestTelemetry,
@@ -16,6 +17,32 @@ type ChatMessage = {
 
 export async function POST(request: Request) {
   try {
+    // ==========================================
+    // AUTHENTICATION
+    // Only signed-in users may use the assistant,
+    // and every answer uses only THEIR data.
+    // ==========================================
+
+    const authSupabase = await getSupabaseServerClient();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await authSupabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        {
+          error: "Authentication required.",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    const userId = user.id;
+
     const body = await request.json();
 
     const messages = Array.isArray(body.messages)
@@ -84,9 +111,9 @@ export async function POST(request: Request) {
     switch (intent) {
       case "machine_status": {
         const { data, error } =
-          await getCurrentMachineStatus();
+          await getCurrentMachineStatus(userId);
 
-        if (error) {
+        if (error || !data) {
           machineContext = `
 Machine data status:
 The current machine status could not be retrieved.
@@ -94,9 +121,31 @@ The current machine status could not be retrieved.
 Do not invent a machine status.
 Tell the user that the current machine status is unavailable.
 `;
-        } else if (data) {
+        } else if (data.ownership === "idle") {
           machineContext = `
 Trusted AgriDrill machine status:
+
+No operation is currently running on the machine.
+
+Important:
+- This only means that no operation session is active in the system.
+- Do not claim the machine is physically powered off or confirmed offline.
+- Do not invent any additional machine information.
+`;
+        } else if (data.ownership === "other") {
+          machineContext = `
+Trusted AgriDrill machine status:
+
+The machine is currently being operated by another user.
+
+Important:
+- The details of another user's operation are private and not available.
+- Tell the user the machine is in use by someone else, and that they can start their own operation after it is stopped.
+- Do not invent or guess any machine values.
+`;
+        } else {
+          machineContext = `
+Trusted AgriDrill machine status (this user's own running operation):
 
 Line 1: ${data.line1}
 Line 2: ${data.line2}
@@ -117,19 +166,19 @@ Important:
 
       case "telemetry": {
         const { data, error } =
-          await getLatestTelemetry();
+          await getLatestTelemetry(userId);
 
-        if (error) {
+        if (error || !data) {
           telemetryContext = `
 Telemetry data status:
-The latest AgriDrill telemetry could not be retrieved.
+${error ?? "The latest AgriDrill telemetry could not be retrieved."}
 
 Do not invent telemetry values.
 Tell the user that the requested telemetry information is unavailable.
 `;
-        } else if (data) {
+        } else {
           telemetryContext = `
-Trusted AgriDrill telemetry:
+Trusted AgriDrill telemetry (from this user's most recent operation):
 
 Recorded at: ${data.created_at}
 IR1: ${data.ir1}
@@ -139,7 +188,7 @@ Hole count: ${data.hole_count}
 Drive value: ${data.drive_speed}
 
 Important:
-- These are the latest recorded telemetry values available in the database.
+- These are the latest recorded telemetry values from this user's own most recent operation.
 - Do not describe them as physically confirmed live values.
 - The drive value is a raw drive command/value, not a physical speed measurement.
 - Do not invent additional telemetry fields.
@@ -151,17 +200,17 @@ Important:
 
       case "operation": {
         const { data, error } =
-          await getLatestOperationSession();
+          await getLatestOperationSession(userId);
 
-        if (error) {
+        if (error || !data) {
           operationContext = `
 Operation data status:
-The latest AgriDrill operation could not be retrieved.
+${error ?? "The latest AgriDrill operation could not be retrieved."}
 
 Do not invent operation information.
 Tell the user that the requested operation information is unavailable.
 `;
-        } else if (data) {
+        } else {
           const seedsPlanted =
             data.end_seed_count !== null
               ? data.end_seed_count -
@@ -175,7 +224,7 @@ Tell the user that the requested operation information is unavailable.
               : null;
 
           operationContext = `
-Trusted AgriDrill operation data:
+Trusted AgriDrill operation data (this user's most recent operation):
 
 Operation ID: ${data.id}
 Started at: ${data.started_at}
@@ -207,7 +256,7 @@ Holes completed: ${
           }
 
 Important:
-- This is the latest recorded operation data available in the database.
+- This is the latest recorded operation of this user's own account.
 - If the operation status is "running", do not describe it as completed.
 - If an end count is null, do not calculate or invent a completed total.
 - Do not invent missing operation information.
@@ -219,7 +268,7 @@ Important:
 
       case "notification": {
         const { data, error } =
-          await getRecentNotifications();
+          await getRecentNotifications(userId);
 
         if (error) {
           notificationContext = `
@@ -247,7 +296,7 @@ Read status: ${
             .join("\n");
 
           notificationContext = `
-Trusted recent AgriDrill notifications:
+Trusted recent AgriDrill notifications (this user's own):
 
 ${notificationLines}
 
@@ -262,7 +311,7 @@ Important:
           notificationContext = `
 Trusted AgriDrill notification data:
 
-There are currently no recorded recent notifications.
+There are currently no recorded recent notifications for this user.
 
 Do not invent notifications or alerts.
 `;
@@ -295,6 +344,7 @@ Important:
 - Use the conversation history as context.
 - Answer the latest user message.
 - When trusted AgriDrill machine data is provided above, use it as the source of truth.
+- Only this user's own operations and notifications are available. Never claim anything about other users' activity.
 - Never invent machine values, status, telemetry, operation records, alerts, or notifications.
 - If requested machine information is unavailable, clearly say so.
 - Distinguish recorded information from current physical conditions.
