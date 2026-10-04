@@ -108,7 +108,7 @@ const developers = [
   {
     name: "Ybañez, Jafit Love R.",
     role: "Full-Stack Engineer & Quality Assurance (QA) Engineer",
-    photo: "/ybanez-software.jpg",
+    photo: "/ybanez-fullStack.jpg",
     desc: " Develops the web application for real-time telemetry monitoring and control of the semi-autonomous farming robot, as well as conducting quality assurance testing to ensure the software meets performance and reliability standards.",
   },
 ];
