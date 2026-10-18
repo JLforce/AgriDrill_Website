@@ -9,6 +9,10 @@ interface CommandHistoryRow {
   readonly command: string;
   readonly command_label: string;
   readonly status: "sent" | "failed";
+  /**
+   * The Command History page passes the user's own operation number
+   * (1, 2, 3...) in this field, so the exported file matches the screen.
+   */
   readonly operation_session_id: number | null;
 }
 
@@ -21,7 +25,7 @@ interface CommandCsvRow {
   readonly command: string;
   readonly action: string;
   readonly status: string;
-  readonly operation_session: number | string;
+  readonly operation_number: number | string;
 }
 
 function toCsvRow(
@@ -46,7 +50,7 @@ function toCsvRow(
     command: row.command,
     action: row.command_label,
     status: row.status,
-    operation_session:
+    operation_number:
       row.operation_session_id ?? "",
   };
 }

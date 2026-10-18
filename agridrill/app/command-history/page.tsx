@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   FiActivity,
@@ -15,7 +15,13 @@ import {
   type MachineCommandLog,
   useCommandHistory,
 } from "@/hooks/useCommandHistory";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { exportCommandHistoryCsv } from "@/utils/exportCommandHistoryCsv";
+
+// 16px text on phones: smaller text makes iPhones zoom the page when a
+// field is tapped.
+const SELECT_CLASSES =
+  "w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 sm:text-sm";
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -31,7 +37,7 @@ function StatusBadge({
 }) {
   if (status === "sent") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
         <FiCheckCircle
           className="h-3.5 w-3.5"
           aria-hidden="true"
@@ -42,7 +48,7 @@ function StatusBadge({
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">
       <FiAlertCircle
         className="h-3.5 w-3.5"
         aria-hidden="true"
@@ -62,7 +68,7 @@ function CommandBadge({
 
   return (
     <span
-      className={`inline-flex min-w-10 items-center justify-center rounded-xl border px-3 py-1.5 text-sm font-black ${
+      className={`inline-flex min-w-10 shrink-0 items-center justify-center rounded-xl border px-3 py-1.5 text-sm font-black ${
         isStop
           ? "border-rose-200 bg-rose-50 text-rose-700"
           : isStart
@@ -111,6 +117,35 @@ function OperatorCell({
   );
 }
 
+/**
+ * Link to the operation a command belongs to. It shows the user's own
+ * operation number (1, 2, 3...), the same number Operation History shows.
+ * The real database id is only used for the page address.
+ */
+function SessionLink({
+  sessionId,
+  sessionNumber,
+}: {
+  readonly sessionId: number | null;
+  readonly sessionNumber: number | undefined;
+}) {
+  if (sessionId === null) {
+    return <span className="text-slate-400">—</span>;
+  }
+
+  const label = sessionNumber ?? "…";
+
+  return (
+    <Link
+      href={`/operation-history/${sessionId}`}
+      className="whitespace-nowrap font-bold text-emerald-600 underline-offset-4 transition hover:text-emerald-700 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+      title={`View Operation Session ${label}`}
+    >
+      Session {label}
+    </Link>
+  );
+}
+
 function LoadingRows() {
   return (
     <>
@@ -155,12 +190,135 @@ function LoadingRows() {
   );
 }
 
+function LoadingCards() {
+  return (
+    <>
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div
+          key={index}
+          className="animate-pulse rounded-2xl border border-slate-200 bg-white p-4"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-12 rounded-xl bg-slate-200" />
+
+              <div className="space-y-2">
+                <div className="h-4 w-20 rounded bg-slate-200" />
+                <div className="h-3 w-28 rounded bg-slate-200" />
+              </div>
+            </div>
+
+            <div className="h-7 w-16 rounded-full bg-slate-200" />
+          </div>
+
+          <div className="mt-3 h-9 rounded-xl bg-slate-100" />
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** Phone and tablet layout: one card per command. */
+function CommandCard({
+  log,
+  sessionNumber,
+}: {
+  readonly log: MachineCommandLog;
+  readonly sessionNumber: number | undefined;
+}) {
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <CommandBadge command={log.command} />
+
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-800">
+              {log.command_label}
+            </p>
+
+            <p className="text-xs text-slate-400">
+              {formatDateTime(log.created_at)}
+            </p>
+          </div>
+        </div>
+
+        <StatusBadge status={log.status} />
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+        <div className="min-w-0 flex-1">
+          <OperatorCell
+            name={log.operator_name}
+            email={log.operator_email}
+          />
+        </div>
+
+        <div className="shrink-0 text-sm font-semibold">
+          <SessionLink
+            sessionId={log.operation_session_id}
+            sessionNumber={sessionNumber}
+          />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function EmptyState({
+  hasActiveFilters,
+  onClearFilters,
+}: {
+  readonly hasActiveFilters: boolean;
+  readonly onClearFilters: () => void;
+}) {
+  return (
+    <div className="px-4 py-14 text-center sm:px-6 sm:py-16">
+      <div className="mx-auto max-w-md">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+          <FiActivity
+            className="h-6 w-6"
+            aria-hidden="true"
+          />
+        </div>
+
+        <h3 className="mt-4 text-base font-bold text-slate-900">
+          {hasActiveFilters
+            ? "No matching command records"
+            : "No command activity yet"}
+        </h3>
+
+        <p className="mt-1 text-sm text-slate-500">
+          {hasActiveFilters
+            ? "Try changing the filters to view other command activity."
+            : "Commands sent from the Robot Control panel will appear here."}
+        </p>
+
+        {hasActiveFilters ? (
+          <button
+            type="button"
+            onClick={onClearFilters}
+            className="mt-4 min-h-11 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50"
+          >
+            Clear Filters
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export default function CommandHistoryPage() {
   const {
     logs,
     isLoading,
     error,
   } = useCommandHistory();
+
+  const supabase = useMemo(
+    () => getSupabaseBrowserClient(),
+    []
+  );
 
   const [commandFilter, setCommandFilter] =
     useState("all");
@@ -170,6 +328,98 @@ export default function CommandHistoryPage() {
 
   const [sessionFilter, setSessionFilter] =
     useState("all");
+
+  // Real session id -> the user's own operation number (1, 2, 3...)
+  const [sessionNumbers, setSessionNumbers] =
+    useState<Record<number, number>>({});
+
+  // Session ids whose number was already requested.
+  const requestedSessionIdsRef = useRef<Set<number>>(
+    new Set()
+  );
+
+  // Look up the operation number of every session that appears in the
+  // commands. Only sessions not seen before are requested.
+  useEffect(() => {
+    const missingIds = Array.from(
+      new Set(
+        logs
+          .map((log) => log.operation_session_id)
+          .filter(
+            (sessionId): sessionId is number =>
+              sessionId !== null
+          )
+      )
+    ).filter(
+      (sessionId) =>
+        !requestedSessionIdsRef.current.has(sessionId)
+    );
+
+    if (missingIds.length === 0) {
+      return;
+    }
+
+    missingIds.forEach((sessionId) =>
+      requestedSessionIdsRef.current.add(sessionId)
+    );
+
+    const loadSessionNumbers = async () => {
+      const found: Record<number, number> = {};
+      let failed = false;
+
+      // Ask in small groups so the request address never gets too long.
+      for (let start = 0; start < missingIds.length; start += 100) {
+        const chunk = missingIds.slice(start, start + 100);
+
+        const { data, error: fetchError } = await supabase
+          .from("operation_sessions")
+          .select("id, user_sequence")
+          .in("id", chunk);
+
+        if (fetchError) {
+          console.error(
+            "Failed to load operation numbers:",
+            fetchError
+          );
+
+          failed = true;
+
+          // Allow another try later.
+          chunk.forEach((sessionId) =>
+            requestedSessionIdsRef.current.delete(sessionId)
+          );
+
+          continue;
+        }
+
+        for (const row of data ?? []) {
+          found[row.id] = row.user_sequence ?? row.id;
+        }
+
+        // A session that could not be read keeps its real id as the number.
+        for (const sessionId of chunk) {
+          if (found[sessionId] === undefined) {
+            found[sessionId] = sessionId;
+          }
+        }
+      }
+
+      if (Object.keys(found).length > 0) {
+        setSessionNumbers((current) => ({
+          ...current,
+          ...found,
+        }));
+      }
+
+      if (failed) {
+        console.warn(
+          "Some operation numbers could not be loaded."
+        );
+      }
+    };
+
+    void loadSessionNumbers();
+  }, [logs, supabase]);
 
   const sessionOptions = useMemo(() => {
     return Array.from(
@@ -186,8 +436,12 @@ export default function CommandHistoryPage() {
               sessionId !== null
           )
       )
-    ).sort((a, b) => a - b);
-  }, [logs]);
+    ).sort(
+      (a, b) =>
+        (sessionNumbers[a] ?? a) -
+        (sessionNumbers[b] ?? b)
+    );
+  }, [logs, sessionNumbers]);
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
@@ -237,15 +491,29 @@ export default function CommandHistoryPage() {
       return;
     }
 
-    exportCommandHistoryCsv(filteredLogs);
+    // The exported file shows the user's own operation number, the same
+    // number as on screen, instead of the internal database id.
+    const exportLogs = filteredLogs.map((log) =>
+      log.operation_session_id !== null
+        ? {
+            ...log,
+            operation_session_id:
+              sessionNumbers[
+                log.operation_session_id
+              ] ?? log.operation_session_id,
+          }
+        : log
+    );
+
+    exportCommandHistoryCsv(exportLogs);
   };
 
   return (
     <DashboardShell>
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {/* PAGE HEADER */}
         <header className="flex items-start gap-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 text-emerald-600 shadow-sm">
+          <div className="shrink-0 rounded-2xl border border-slate-200 bg-white p-3 text-emerald-600 shadow-sm">
             <FiActivity
               className="h-6 w-6"
               aria-hidden="true"
@@ -253,7 +521,7 @@ export default function CommandHistoryPage() {
           </div>
 
           <div>
-            <h1 className="text-4xl font-black tracking-tight text-slate-900">
+            <h1 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
               Command History
             </h1>
 
@@ -284,7 +552,7 @@ export default function CommandHistoryPage() {
         ) : null}
 
         {/* FILTERS */}
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
+        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
           <div className="mb-5">
             <h2 className="text-base font-bold text-slate-900">
               Filters
@@ -297,8 +565,8 @@ export default function CommandHistoryPage() {
 
           <div className="grid gap-4 md:grid-cols-3">
             {/* COMMAND FILTER */}
-            <label className="space-y-2">
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+            <label className="block min-w-0 space-y-2">
+              <span className="block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
                 Command
               </span>
 
@@ -309,7 +577,7 @@ export default function CommandHistoryPage() {
                     event.target.value
                   )
                 }
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                className={SELECT_CLASSES}
               >
                 <option value="all">
                   All commands
@@ -342,8 +610,8 @@ export default function CommandHistoryPage() {
             </label>
 
             {/* STATUS FILTER */}
-            <label className="space-y-2">
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+            <label className="block min-w-0 space-y-2">
+              <span className="block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
                 Status
               </span>
 
@@ -354,7 +622,7 @@ export default function CommandHistoryPage() {
                     event.target.value
                   )
                 }
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                className={SELECT_CLASSES}
               >
                 <option value="all">
                   All statuses
@@ -371,8 +639,8 @@ export default function CommandHistoryPage() {
             </label>
 
             {/* SESSION FILTER */}
-            <label className="space-y-2">
-              <span className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+            <label className="block min-w-0 space-y-2">
+              <span className="block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
                 Operation session
               </span>
 
@@ -383,7 +651,7 @@ export default function CommandHistoryPage() {
                     event.target.value
                   )
                 }
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                className={SELECT_CLASSES}
               >
                 <option value="all">
                   All sessions
@@ -395,7 +663,9 @@ export default function CommandHistoryPage() {
                       key={sessionId}
                       value={String(sessionId)}
                     >
-                      Session {sessionId}
+                      Session{" "}
+                      {sessionNumbers[sessionId] ??
+                        "…"}
                     </option>
                   )
                 )}
@@ -423,7 +693,7 @@ export default function CommandHistoryPage() {
                 type="button"
                 onClick={clearFilters}
                 disabled={!hasActiveFilters}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Clear Filters
               </button>
@@ -435,7 +705,7 @@ export default function CommandHistoryPage() {
                   isLoading ||
                   filteredLogs.length === 0
                 }
-                className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 <FiDownload
                   className="h-4 w-4"
@@ -447,9 +717,9 @@ export default function CommandHistoryPage() {
           </div>
         </section>
 
-        {/* COMMAND TABLE */}
+        {/* COMMAND ACTIVITY */}
         <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-5 py-4 lg:px-6">
+          <div className="border-b border-slate-200 px-4 py-4 sm:px-5 lg:px-6">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
@@ -470,146 +740,137 @@ export default function CommandHistoryPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left">
-              <thead className="border-b border-slate-200 bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500 lg:px-6">
-                    Date &amp; Time
-                  </th>
-
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
-                    Operator
-                  </th>
-
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
-                    Command
-                  </th>
-
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
-                    Action
-                  </th>
-
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
-                    Status
-                  </th>
-
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500 lg:px-6">
-                    Session
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-slate-100">
+          {!isLoading && filteredLogs.length === 0 ? (
+            <EmptyState
+              hasActiveFilters={hasActiveFilters}
+              onClearFilters={clearFilters}
+            />
+          ) : (
+            /*
+              Below 768px of available width: one card per command.
+              From 768px of available width: the table.
+            */
+            <div className="@container">
+              {/* Cards */}
+              <div className="space-y-3 p-4 @3xl:hidden">
                 {isLoading ? (
-                  <LoadingRows />
-                ) : filteredLogs.length ===
-                  0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-16 text-center"
-                    >
-                      <div className="mx-auto max-w-md">
-                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
-                          <FiActivity
-                            className="h-6 w-6"
-                            aria-hidden="true"
-                          />
-                        </div>
-
-                        <h3 className="mt-4 text-base font-bold text-slate-900">
-                          {hasActiveFilters
-                            ? "No matching command records"
-                            : "No command activity yet"}
-                        </h3>
-
-                        <p className="mt-1 text-sm text-slate-500">
-                          {hasActiveFilters
-                            ? "Try changing the filters to view other command activity."
-                            : "Commands sent from the Robot Control panel will appear here."}
-                        </p>
-
-                        {hasActiveFilters ? (
-                          <button
-                            type="button"
-                            onClick={
-                              clearFilters
-                            }
-                            className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50"
-                          >
-                            Clear Filters
-                          </button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
+                  <LoadingCards />
                 ) : (
                   filteredLogs.map((log) => (
-                    <tr
+                    <CommandCard
                       key={log.id}
-                      className="transition-colors hover:bg-slate-50"
-                    >
-                      <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600 lg:px-6">
-                        {formatDateTime(
-                          log.created_at
-                        )}
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <OperatorCell
-                          name={
-                            log.operator_name
-                          }
-                          email={
-                            log.operator_email
-                          }
-                        />
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <CommandBadge
-                          command={
-                            log.command
-                          }
-                        />
-                      </td>
-
-                      <td className="px-4 py-4 text-sm font-semibold text-slate-800">
-                        {log.command_label}
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <StatusBadge
-                          status={log.status}
-                        />
-                      </td>
-
-                      <td className="px-4 py-4 text-sm font-semibold lg:px-6">
-                        {log.operation_session_id !==
-                        null ? (
-                          <Link
-                            href={`/operation-history/${log.operation_session_id}`}
-                            className="font-bold text-emerald-600 underline-offset-4 transition hover:text-emerald-700 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
-                            title={`View Operation Session ${log.operation_session_id}`}
-                          >
-                            Session{" "}
-                            {
+                      log={log}
+                      sessionNumber={
+                        log.operation_session_id !==
+                        null
+                          ? sessionNumbers[
                               log.operation_session_id
-                            }
-                          </Link>
-                        ) : (
-                          <span className="text-slate-400">
-                            —
-                          </span>
-                        )}
-                      </td>
-                    </tr>
+                            ]
+                          : undefined
+                      }
+                    />
                   ))
                 )}
-              </tbody>
-            </table>
-          </div>
+              </div>
+
+              {/* Table */}
+              <div className="hidden overflow-x-auto @3xl:block">
+                <table className="min-w-full text-left">
+                  <thead className="border-b border-slate-200 bg-slate-50">
+                    <tr>
+                      <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500 lg:px-6">
+                        Date &amp; Time
+                      </th>
+
+                      <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+                        Operator
+                      </th>
+
+                      <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+                        Command
+                      </th>
+
+                      <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+                        Action
+                      </th>
+
+                      <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+                        Status
+                      </th>
+
+                      <th className="px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-500 lg:px-6">
+                        Session
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-100">
+                    {isLoading ? (
+                      <LoadingRows />
+                    ) : (
+                      filteredLogs.map((log) => (
+                        <tr
+                          key={log.id}
+                          className="transition-colors hover:bg-slate-50"
+                        >
+                          <td className="whitespace-nowrap px-4 py-4 text-sm text-slate-600 lg:px-6">
+                            {formatDateTime(
+                              log.created_at
+                            )}
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <OperatorCell
+                              name={
+                                log.operator_name
+                              }
+                              email={
+                                log.operator_email
+                              }
+                            />
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <CommandBadge
+                              command={
+                                log.command
+                              }
+                            />
+                          </td>
+
+                          <td className="px-4 py-4 text-sm font-semibold text-slate-800">
+                            {log.command_label}
+                          </td>
+
+                          <td className="px-4 py-4">
+                            <StatusBadge
+                              status={log.status}
+                            />
+                          </td>
+
+                          <td className="px-4 py-4 text-sm font-semibold lg:px-6">
+                            <SessionLink
+                              sessionId={
+                                log.operation_session_id
+                              }
+                              sessionNumber={
+                                log.operation_session_id !==
+                                null
+                                  ? sessionNumbers[
+                                      log.operation_session_id
+                                    ]
+                                  : undefined
+                              }
+                            />
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </section>
       </div>
     </DashboardShell>

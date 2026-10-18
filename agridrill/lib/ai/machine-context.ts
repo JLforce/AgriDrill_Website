@@ -29,6 +29,8 @@ export interface LatestTelemetryContext {
 
 export interface OperationSessionContext {
   id: number;
+  /** The user's own operation number (1, 2, 3...). */
+  user_sequence: number | null;
   started_at: string;
   ended_at: string | null;
   start_seed_count: number;
@@ -246,7 +248,7 @@ export async function getLatestOperationSession(
   const { data, error } = await supabase
     .from("operation_sessions")
     .select(
-      "id, started_at, ended_at, start_seed_count, end_seed_count, start_hole_count, end_hole_count, obstacle_count, status, created_at"
+      "id, user_sequence, started_at, ended_at, start_seed_count, end_seed_count, start_hole_count, end_hole_count, obstacle_count, status, created_at"
     )
     .eq("user_id", userId)
     .order("started_at", { ascending: false })

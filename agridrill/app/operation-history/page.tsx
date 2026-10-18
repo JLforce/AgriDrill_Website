@@ -10,6 +10,7 @@ import { exportOperationHistoryCsv } from "@/utils/exportOperationHistoryCsv";
 
 interface OperationSession {
   id: number;
+  user_sequence: number | null;
   started_at: string;
   ended_at: string | null;
   start_seed_count: number;
@@ -22,6 +23,12 @@ interface OperationSession {
 
 type StatusFilter = "all" | "running" | "completed";
 type DateFilter = "all" | "today" | "7d" | "30d" | "custom";
+
+// The number people see (#1, #2, ...). It counts each user's own operations
+// from 1. The real database id is only used internally and in the page address.
+function getOperationNumber(session: OperationSession) {
+  return session.user_sequence ?? session.id;
+}
 
 function formatDate(dateString: string) {
   return new Intl.DateTimeFormat("en-PH", {
@@ -225,7 +232,7 @@ function OperationCard({
       className="group cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-200"
       role="link"
       tabIndex={0}
-      aria-label={`View operation ${session.id}`}
+      aria-label={`View operation ${getOperationNumber(session)}`}
       onClick={onOpen}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -242,7 +249,7 @@ function OperationCard({
 
           <p className="mt-0.5 text-xs text-slate-400">
             {formatTime(session.started_at)} · Operation #
-            {session.id}
+            {getOperationNumber(session)}
           </p>
         </div>
 
@@ -398,6 +405,7 @@ export default function OperationHistoryPage() {
           .select(
             `
               id,
+              user_sequence,
               started_at,
               ended_at,
               start_seed_count,
@@ -1229,7 +1237,7 @@ export default function OperationHistoryPage() {
                               className="group cursor-pointer transition-all duration-300 hover:bg-gradient-to-r hover:from-emerald-50/40 hover:via-white hover:to-blue-50/30"
                               role="link"
                               tabIndex={0}
-                              aria-label={`View operation ${session.id}`}
+                              aria-label={`View operation ${getOperationNumber(session)}`}
                               onClick={() =>
                                 openSession(session.id)
                               }
@@ -1255,7 +1263,7 @@ export default function OperationHistoryPage() {
                                   {formatTime(
                                     session.started_at
                                   )}{" "}
-                                  · Op #{session.id}
+                                  · Op #{getOperationNumber(session)}
                                 </div>
                               </td>
 
