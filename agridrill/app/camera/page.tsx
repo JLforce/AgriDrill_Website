@@ -553,29 +553,29 @@ export default function CameraPage() {
     <>
       <TopNavbar pageReady />
 
-      <main className="min-h-screen bg-[#030712] px-4 pb-10 pt-6 text-white md:px-8">
+      <main className="min-h-screen overflow-x-clip bg-[#030712] px-3 pb-10 pt-5 text-white sm:px-4 sm:pt-6 md:px-8">
         <div className="mx-auto max-w-7xl">
           {/* Back button */}
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6">
             <BackToDashboardButton />
           </div>
 
           {/* ── TOP GRID: LIVE FEED + CAMERA PANEL ── */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             {/* Live feed card */}
-            <div className="rounded-2xl border border-[#1f2937] bg-[#0b1220] p-4 lg:col-span-2">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111827] text-lg">
+            <div className="min-w-0 rounded-2xl border border-[#1f2937] bg-[#0b1220] p-3 sm:p-4 lg:col-span-2">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#111827] text-lg">
                     📷
                   </span>
 
-                  <div>
-                    <h2 className="text-base font-bold uppercase tracking-wide text-white">
+                  <div className="min-w-0">
+                    <h2 className="truncate text-base font-bold uppercase tracking-wide text-white">
                       {CAMERA_INFO.name}
                     </h2>
 
-                    <p className="text-xs text-[#94a3b8]">
+                    <p className="truncate text-xs text-[#94a3b8]">
                       {CAMERA_INFO.model}
                     </p>
                   </div>
@@ -597,7 +597,7 @@ export default function CameraPage() {
                 />
 
                 {streamState !== "live" && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/80 px-4 text-center">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 overflow-y-auto bg-black/80 p-3 text-center sm:gap-3 sm:px-4">
                     {streamState === "connecting" ? (
                       <p className="text-sm text-[#cbd5e1]">
                         Connecting to the camera...
@@ -608,7 +608,7 @@ export default function CameraPage() {
                           Camera feed unavailable
                         </p>
 
-                        <p className="max-w-sm text-xs text-[#94a3b8]">
+                        <p className="max-w-sm text-[11px] leading-snug text-[#94a3b8] sm:text-xs">
                           Check that the Raspberry Pi is
                           powered on, the camera server is
                           running, and you are on the same
@@ -618,7 +618,7 @@ export default function CameraPage() {
                         <button
                           type="button"
                           onClick={handleRetry}
-                          className="rounded-lg bg-[#22c55e] px-4 py-2 text-xs font-bold text-[#052e16] transition hover:bg-[#4ade80]"
+                          className="rounded-lg bg-[#22c55e] px-5 py-2 text-xs font-bold text-[#052e16] transition hover:bg-[#4ade80]"
                         >
                           Retry
                         </button>
@@ -631,7 +631,7 @@ export default function CameraPage() {
               {captureError && (
                 <p
                   role="alert"
-                  className="mt-3 rounded-lg border border-red-900 bg-red-950/60 px-3 py-2 text-xs text-[#fca5a5]"
+                  className="mt-3 break-words rounded-lg border border-red-900 bg-red-950/60 px-3 py-2 text-xs text-[#fca5a5]"
                 >
                   {captureError}
                 </p>
@@ -644,21 +644,21 @@ export default function CameraPage() {
             </div>
 
             {/* Right column: camera card + controls */}
-            <div className="flex flex-col gap-4">
+            <div className="flex min-w-0 flex-col gap-4">
               {/* Camera 1 card */}
-              <div className="rounded-2xl border border-[#166534] bg-[#052e16]/70 p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#166534] bg-[#052e16] text-lg">
+              <div className="rounded-2xl border border-[#166534] bg-[#052e16]/70 p-3 sm:p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#166534] bg-[#052e16] text-lg">
                       📷
                     </span>
 
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-bold text-white">
                         Camera 1
                       </p>
 
-                      <p className="text-xs text-[#86efac]/80">
+                      <p className="truncate text-xs text-[#86efac]/80">
                         {CAMERA_INFO.name} (
                         {CAMERA_INFO.shortModel})
                       </p>
@@ -700,20 +700,20 @@ export default function CameraPage() {
                   disabled={
                     streamState !== "live" || isSaving
                   }
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#22c55e] px-4 py-3 text-sm font-bold text-[#052e16] transition hover:bg-[#4ade80] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#22c55e] px-4 py-3.5 text-sm font-bold text-[#052e16] transition hover:bg-[#4ade80] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:py-3"
                 >
                   <span>📷</span>
                   {isSaving ? "Saving..." : "Capture Photo"}
                 </button>
               </div>
 
-              {/* Controls card */}
-              <div className="rounded-2xl border border-[#1f2937] bg-[#0b1220] p-4">
+              {/* Controls card (keyboard shortcuts - hidden on touch devices) */}
+              <div className="rounded-2xl border border-[#1f2937] bg-[#0b1220] p-3 sm:p-4 [@media(pointer:coarse)]:hidden">
                 <p className="mb-3 text-sm font-bold uppercase tracking-wide text-white">
                   Controls
                 </p>
 
-                <div className="flex flex-wrap gap-4">
+                <div className="flex flex-wrap gap-x-4 gap-y-3">
                   <KeyHint
                     keyLabel="C"
                     description="Capture Photo"
@@ -734,8 +734,8 @@ export default function CameraPage() {
           </div>
 
           {/* ── SAVED PHOTOS ── */}
-          <div className="mt-4 rounded-2xl border border-[#1f2937] bg-[#0b1220] p-4">
-            <div className="mb-3 flex items-center justify-between">
+          <div className="mt-4 rounded-2xl border border-[#1f2937] bg-[#0b1220] p-3 sm:p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="text-lg">🖼️</span>
 
@@ -745,7 +745,7 @@ export default function CameraPage() {
               </div>
 
               {!isLoadingPhotos && (
-                <span className="text-xs text-[#94a3b8]">
+                <span className="shrink-0 text-xs text-[#94a3b8]">
                   {savedPhotos.length} saved
                 </span>
               )}
@@ -771,11 +771,11 @@ export default function CameraPage() {
                   shown.
                 </p>
 
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
                   {savedPhotos.map((photo) => (
                     <div
                       key={photo.id}
-                      className="overflow-hidden rounded-xl border border-[#1f2937] bg-black"
+                      className="min-w-0 overflow-hidden rounded-xl border border-[#1f2937] bg-black"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
@@ -801,7 +801,7 @@ export default function CameraPage() {
                             onClick={() =>
                               void handleDownload(photo)
                             }
-                            className="flex-1 rounded-md border border-[#334155] bg-[#111827] px-2 py-1 text-[11px] font-semibold text-[#cbd5e1] transition hover:border-[#22c55e] hover:text-[#4ade80]"
+                            className="flex-1 rounded-md border border-[#334155] bg-[#111827] px-2 py-2 text-[11px] font-semibold text-[#cbd5e1] transition hover:border-[#22c55e] hover:text-[#4ade80] sm:py-1"
                           >
                             Download
                           </button>
@@ -811,7 +811,7 @@ export default function CameraPage() {
                             onClick={() =>
                               void handleDelete(photo)
                             }
-                            className="flex-1 rounded-md border border-[#334155] bg-[#111827] px-2 py-1 text-[11px] font-semibold text-[#cbd5e1] transition hover:border-[#f87171] hover:text-[#f87171]"
+                            className="flex-1 rounded-md border border-[#334155] bg-[#111827] px-2 py-2 text-[11px] font-semibold text-[#cbd5e1] transition hover:border-[#f87171] hover:text-[#f87171] sm:py-1"
                           >
                             Delete
                           </button>
@@ -850,7 +850,7 @@ function StatusBadge({ state }: { state: StreamState }) {
 
   return (
     <span
-      className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest ${config.text}`}
+      className={`flex shrink-0 items-center gap-1.5 text-xs font-bold uppercase tracking-widest ${config.text}`}
     >
       <span
         className={`h-2 w-2 rounded-full ${config.dot}`}
@@ -870,14 +870,14 @@ function StatBox({
   icon: string;
 }) {
   return (
-    <div className="rounded-lg border border-[#166534]/60 bg-[#031f0d] px-2 py-2">
+    <div className="min-w-0 rounded-lg border border-[#166534]/60 bg-[#031f0d] px-2 py-2">
       <p className="text-sm">{icon}</p>
 
-      <p className="mt-1 text-[10px] uppercase tracking-wide text-[#86efac]/70">
+      <p className="mt-1 truncate text-[10px] uppercase tracking-wide text-[#86efac]/70">
         {label}
       </p>
 
-      <p className="text-xs font-semibold text-white">
+      <p className="break-words text-xs font-semibold leading-tight text-white">
         {value}
       </p>
     </div>

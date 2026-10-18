@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 interface OperationSession {
   id: number;
+  user_sequence: number | null;
   started_at: string;
   ended_at: string | null;
   start_seed_count: number;
@@ -125,6 +126,51 @@ function formatCommandStatus(
   return status === "sent" ? "Sent" : "Failed";
 }
 
+function getOperatorName(command: OperationCommand) {
+  return (
+    command.operator_name?.trim() ||
+    command.operator_email?.trim() ||
+    "Unknown operator"
+  );
+}
+
+function CommandLetter({ command }: { command: string }) {
+  const isStop = command === "S";
+  const isStart = command === "D";
+
+  return (
+    <span
+      className={`inline-flex min-w-10 shrink-0 items-center justify-center rounded-xl border px-3 py-1.5 text-sm font-black ${
+        isStop
+          ? "border-rose-200 bg-rose-50 text-rose-700"
+          : isStart
+            ? "border-amber-200 bg-amber-50 text-amber-700"
+            : "border-slate-200 bg-slate-100 text-slate-700"
+      }`}
+    >
+      {command}
+    </span>
+  );
+}
+
+function CommandStatusPill({
+  status,
+}: {
+  status: OperationCommand["status"];
+}) {
+  return (
+    <span
+      className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
+        status === "sent"
+          ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+          : "border border-rose-200 bg-rose-50 text-rose-700"
+      }`}
+    >
+      {formatCommandStatus(status)}
+    </span>
+  );
+}
+
 export default function OperationDetailsPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -172,6 +218,7 @@ export default function OperationDetailsPage() {
           .select(
             `
               id,
+              user_sequence,
               started_at,
               ended_at,
               start_seed_count,
@@ -412,18 +459,18 @@ export default function OperationDetailsPage() {
   if (error || !session) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40">
-        <div className="mx-auto max-w-[1200px] px-6 py-10">
+        <div className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6 sm:py-10">
           <button
             type="button"
             onClick={() =>
               router.push("/operation-history")
             }
-            className="mb-8 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm transition-all hover:-translate-x-1 hover:border-slate-300 hover:text-slate-900"
+            className="mb-8 min-h-11 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm transition-all hover:-translate-x-1 hover:border-slate-300 hover:text-slate-900"
           >
             ← Back to Operation History
           </button>
 
-          <div className="rounded-3xl border border-red-100 bg-white p-10 text-center shadow-sm">
+          <div className="rounded-3xl border border-red-100 bg-white p-8 text-center shadow-sm sm:p-10">
             <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-lg font-bold text-red-500">
               !
             </div>
@@ -442,9 +489,13 @@ export default function OperationDetailsPage() {
     );
   }
 
+  // The number people see: the user's own count (1, 2, 3...).
+  const operationNumber =
+    session.user_sequence ?? session.id;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/40">
-      <div className="mx-auto w-full max-w-[1200px] px-5 py-7 sm:px-8 sm:py-9">
+      <div className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-8 sm:py-9">
 
         {/* Back button */}
         <button
@@ -452,13 +503,13 @@ export default function OperationDetailsPage() {
           onClick={() =>
             router.push("/operation-history")
           }
-          className="mb-6 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm transition-all duration-300 hover:-translate-x-1 hover:border-emerald-200 hover:text-emerald-700 hover:shadow-md"
+          className="mb-6 inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm transition-all duration-300 hover:-translate-x-1 hover:border-emerald-200 hover:text-emerald-700 hover:shadow-md"
         >
           ← Operation History
         </button>
 
         {/* Header */}
-        <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 px-6 py-8 shadow-xl sm:px-8 sm:py-9">
+        <div className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 px-5 py-7 shadow-xl sm:px-8 sm:py-9">
           <div className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 animate-pulse rounded-full bg-emerald-400/10 blur-3xl" />
 
           <div className="relative">
@@ -472,7 +523,7 @@ export default function OperationDetailsPage() {
               />
 
               <span className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
-                Operation #{session.id}
+                Operation #{operationNumber}
               </span>
             </div>
 
@@ -592,7 +643,7 @@ export default function OperationDetailsPage() {
 
         {/* Timing information */}
         <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-6 py-5">
+          <div className="border-b border-slate-200 px-4 py-5 sm:px-6">
             <h2 className="text-lg font-semibold text-slate-900">
               Operation Timing
             </h2>
@@ -604,7 +655,7 @@ export default function OperationDetailsPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-px bg-slate-100 md:grid-cols-2">
-            <div className="bg-white p-6">
+            <div className="bg-white p-4 sm:p-6">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Start Time
               </p>
@@ -616,7 +667,7 @@ export default function OperationDetailsPage() {
               </p>
             </div>
 
-            <div className="bg-white p-6">
+            <div className="bg-white p-4 sm:p-6">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                 End Time
               </p>
@@ -634,7 +685,7 @@ export default function OperationDetailsPage() {
 
         {/* Counter information */}
         <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-6 py-5">
+          <div className="border-b border-slate-200 px-4 py-5 sm:px-6">
             <h2 className="text-lg font-semibold text-slate-900">
               Planting Counters
             </h2>
@@ -645,23 +696,24 @@ export default function OperationDetailsPage() {
             </p>
           </div>
 
+          {/* Four short columns: they fit a phone without sideways scrolling */}
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px]">
+            <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-3 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 sm:px-6">
                     Counter
                   </th>
 
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-3 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 sm:px-6">
                     Start
                   </th>
 
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-3 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 sm:px-6">
                     End
                   </th>
 
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="px-3 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 sm:px-6">
                     Result
                   </th>
                 </tr>
@@ -669,39 +721,39 @@ export default function OperationDetailsPage() {
 
               <tbody className="divide-y divide-slate-100">
                 <tr>
-                  <td className="px-6 py-5 text-sm font-medium text-slate-700">
+                  <td className="px-3 py-5 text-sm font-medium text-slate-700 sm:px-6">
                     Hole Count
                   </td>
 
-                  <td className="px-6 py-5 text-sm text-slate-600">
+                  <td className="px-3 py-5 text-sm text-slate-600 sm:px-6">
                     {session.start_hole_count}
                   </td>
 
-                  <td className="px-6 py-5 text-sm text-slate-600">
+                  <td className="px-3 py-5 text-sm text-slate-600 sm:px-6">
                     {session.end_hole_count ??
                       "—"}
                   </td>
 
-                  <td className="px-6 py-5 text-sm font-bold text-emerald-700">
+                  <td className="px-3 py-5 text-sm font-bold text-emerald-700 sm:px-6">
                     {statistics.holes ?? "—"}
                   </td>
                 </tr>
 
                 <tr>
-                  <td className="px-6 py-5 text-sm font-medium text-slate-700">
+                  <td className="px-3 py-5 text-sm font-medium text-slate-700 sm:px-6">
                     Seed Count
                   </td>
 
-                  <td className="px-6 py-5 text-sm text-slate-600">
+                  <td className="px-3 py-5 text-sm text-slate-600 sm:px-6">
                     {session.start_seed_count}
                   </td>
 
-                  <td className="px-6 py-5 text-sm text-slate-600">
+                  <td className="px-3 py-5 text-sm text-slate-600 sm:px-6">
                     {session.end_seed_count ??
                       "—"}
                   </td>
 
-                  <td className="px-6 py-5 text-sm font-bold text-blue-700">
+                  <td className="px-3 py-5 text-sm font-bold text-blue-700 sm:px-6">
                     {statistics.seeds ?? "—"}
                   </td>
                 </tr>
@@ -712,7 +764,7 @@ export default function OperationDetailsPage() {
 
         {/* Command Activity Summary */}
         <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-6 py-5">
+          <div className="border-b border-slate-200 px-4 py-5 sm:px-6">
             <h2 className="text-lg font-semibold text-slate-900">
               Command Activity Summary
             </h2>
@@ -722,7 +774,7 @@ export default function OperationDetailsPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-6 lg:grid-cols-5">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
                 Total Commands
@@ -797,7 +849,7 @@ export default function OperationDetailsPage() {
 
         {/* Command Activity */}
         <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-6 py-5">
+          <div className="border-b border-slate-200 px-4 py-5 sm:px-6">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">
@@ -836,46 +888,87 @@ export default function OperationDetailsPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px]">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Time
-                    </th>
+            /*
+              Below 768px of available width: one card per command.
+              From 768px of available width: the table.
+            */
+            <div className="@container">
+              {/* Cards */}
+              <div className="space-y-3 p-4 @3xl:hidden">
+                {commands.map((command) => (
+                  <article
+                    key={command.id}
+                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <CommandLetter
+                          command={command.command}
+                        />
 
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Operator
-                    </th>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-800">
+                            {command.command_label}
+                          </p>
 
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Command
-                    </th>
+                          <p className="text-xs text-slate-400">
+                            {formatDateTime(
+                              command.created_at
+                            )}
+                          </p>
+                        </div>
+                      </div>
 
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Action
-                    </th>
+                      <CommandStatusPill
+                        status={command.status}
+                      />
+                    </div>
 
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
+                    <div className="mt-3 min-w-0 border-t border-slate-100 pt-3">
+                      <p className="truncate text-sm font-semibold text-slate-800">
+                        {getOperatorName(command)}
+                      </p>
 
-                <tbody className="divide-y divide-slate-100">
-                  {commands.map((command) => {
-                    const operator =
-                      command.operator_name?.trim() ||
-                      command.operator_email?.trim() ||
-                      "Unknown operator";
+                      {command.operator_email &&
+                      command.operator_name ? (
+                        <p className="mt-0.5 truncate text-xs text-slate-400">
+                          {command.operator_email}
+                        </p>
+                      ) : null}
+                    </div>
+                  </article>
+                ))}
+              </div>
 
-                    const isStop =
-                      command.command === "S";
+              {/* Table */}
+              <div className="hidden overflow-x-auto @3xl:block">
+                <table className="w-full min-w-[720px]">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50">
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Time
+                      </th>
 
-                    const isStart =
-                      command.command === "D";
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Operator
+                      </th>
 
-                    return (
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Command
+                      </th>
+
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Action
+                      </th>
+
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-100">
+                    {commands.map((command) => (
                       <tr
                         key={command.id}
                         className="transition-colors hover:bg-slate-50"
@@ -889,7 +982,7 @@ export default function OperationDetailsPage() {
                         <td className="px-6 py-4">
                           <div>
                             <p className="text-sm font-semibold text-slate-800">
-                              {operator}
+                              {getOperatorName(command)}
                             </p>
 
                             {command.operator_email &&
@@ -902,17 +995,9 @@ export default function OperationDetailsPage() {
                         </td>
 
                         <td className="px-6 py-4">
-                          <span
-                            className={`inline-flex min-w-10 items-center justify-center rounded-xl border px-3 py-1.5 text-sm font-black ${
-                              isStop
-                                ? "border-rose-200 bg-rose-50 text-rose-700"
-                                : isStart
-                                  ? "border-amber-200 bg-amber-50 text-amber-700"
-                                  : "border-slate-200 bg-slate-100 text-slate-700"
-                            }`}
-                          >
-                            {command.command}
-                          </span>
+                          <CommandLetter
+                            command={command.command}
+                          />
                         </td>
 
                         <td className="px-6 py-4 text-sm font-semibold text-slate-800">
@@ -920,31 +1005,22 @@ export default function OperationDetailsPage() {
                         </td>
 
                         <td className="px-6 py-4">
-                          <span
-                            className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
-                              command.status ===
-                              "sent"
-                                ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
-                                : "border border-rose-200 bg-rose-50 text-rose-700"
-                            }`}
-                          >
-                            {formatCommandStatus(
-                              command.status
-                            )}
-                          </span>
+                          <CommandStatusPill
+                            status={command.status}
+                          />
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </section>
 
         {/* Obstacles */}
         <section className="overflow-hidden rounded-2xl border border-amber-100 bg-white shadow-sm">
-          <div className="border-b border-amber-100 bg-gradient-to-r from-amber-50/80 to-white px-6 py-5">
+          <div className="border-b border-amber-100 bg-gradient-to-r from-amber-50/80 to-white px-4 py-5 sm:px-6">
             <h2 className="text-lg font-semibold text-slate-900">
               Obstacle Events
             </h2>
@@ -955,7 +1031,7 @@ export default function OperationDetailsPage() {
             </p>
           </div>
 
-          <div className="flex items-center justify-between px-6 py-6">
+          <div className="flex items-center justify-between gap-4 px-4 py-6 sm:px-6">
             <div>
               <p className="text-3xl font-bold text-slate-900">
                 {session.obstacle_count}
@@ -969,7 +1045,7 @@ export default function OperationDetailsPage() {
               </p>
             </div>
 
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-sm font-bold text-amber-700">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-sm font-bold text-amber-700">
               OB
             </div>
           </div>

@@ -71,7 +71,7 @@ function SectionLabel({
   children: ReactNode;
 }) {
   return (
-    <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
+    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 sm:text-xs sm:tracking-[0.25em]">
       {children}
     </p>
   );
@@ -124,21 +124,21 @@ export default function FieldAnalyticsPage() {
 
   return (
     <DashboardShell>
-      <div className="space-y-8">
-        <header className="flex items-center gap-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 text-emerald-600 shadow-sm">
+      <div className="min-w-0 space-y-6 sm:space-y-8">
+        <header className="flex items-center gap-3 sm:gap-4">
+          <div className="shrink-0 rounded-2xl border border-slate-200 bg-white p-2.5 text-emerald-600 shadow-sm sm:p-3">
             <FiActivity
-              className="h-6 w-6"
+              className="h-5 w-5 sm:h-6 sm:w-6"
               aria-hidden="true"
             />
           </div>
 
-          <div>
-            <h1 className="text-4xl font-black tracking-tight text-slate-900">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
               Field Analytics
             </h1>
 
-            <p className="mt-1.5 text-sm text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 sm:mt-1.5 sm:text-sm">
               Historical planting and machine performance
               for AgriDrill.
             </p>
@@ -149,7 +149,7 @@ export default function FieldAnalyticsPage() {
           <SectionLabel>Filters</SectionLabel>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <DateRangeFilter
                 value={dateRange}
                 activeQuickRange={activeQuickRange}
@@ -160,20 +160,23 @@ export default function FieldAnalyticsPage() {
               />
             </div>
 
-            <ExportCsvButton
-              rows={rows}
-              disabled={isLoading}
-            />
+            {/* Full-width export button on phones, natural width from sm up */}
+            <div className="shrink-0 [&>*]:w-full sm:[&>*]:w-auto">
+              <ExportCsvButton
+                rows={rows}
+                disabled={isLoading}
+              />
+            </div>
           </div>
         </section>
 
         {error ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <div className="break-words rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             {error}
           </div>
         ) : null}
 
-        <section className="space-y-3">
+        <section className="min-w-0 space-y-3">
           <SectionLabel>Overview</SectionLabel>
 
           <FieldAnalyticsMetrics
@@ -184,33 +187,42 @@ export default function FieldAnalyticsPage() {
           />
         </section>
 
-        <section className="space-y-3">
+        <section className="min-w-0 space-y-3">
           <SectionLabel>Trends</SectionLabel>
 
-          <div className="space-y-6">
-            <HolesSeedsChart rows={rows} />
-            <DriveSpeedChart rows={rows} />
+          <div className="min-w-0 space-y-4 sm:space-y-6">
+            <div className="min-w-0">
+              <HolesSeedsChart rows={rows} />
+            </div>
+            <div className="min-w-0">
+              <DriveSpeedChart rows={rows} />
+            </div>
           </div>
         </section>
 
-        <section className="space-y-3">
+        <section className="min-w-0 space-y-3">
           <SectionLabel>Sensors</SectionLabel>
 
-          <SensorActivityChart
-            rows={rows}
-            ir1ActivePercent={summary.ir1ActivePercent}
-            ir4ActivePercent={summary.ir4ActivePercent}
-          />
+          <div className="min-w-0">
+            <SensorActivityChart
+              rows={rows}
+              ir1ActivePercent={summary.ir1ActivePercent}
+              ir4ActivePercent={summary.ir4ActivePercent}
+            />
+          </div>
         </section>
 
-        <section className="space-y-3">
+        <section className="min-w-0 space-y-3">
           <SectionLabel>Records</SectionLabel>
 
-          <FieldRecordsTable
-            rows={rows}
-            isLoading={isLoading}
-            truncated={truncated}
-          />
+          {/* Keeps a wide table from stretching the whole page sideways */}
+          <div className="min-w-0 max-w-full overflow-x-auto">
+            <FieldRecordsTable
+              rows={rows}
+              isLoading={isLoading}
+              truncated={truncated}
+            />
+          </div>
         </section>
       </div>
     </DashboardShell>

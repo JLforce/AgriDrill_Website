@@ -226,7 +226,7 @@ Tell the user that the requested operation information is unavailable.
           operationContext = `
 Trusted AgriDrill operation data (this user's most recent operation):
 
-Operation ID: ${data.id}
+Operation number: ${data.user_sequence ?? data.id}
 Started at: ${data.started_at}
 Ended at: ${data.ended_at ?? "Not ended"}
 Start seed count: ${data.start_seed_count}

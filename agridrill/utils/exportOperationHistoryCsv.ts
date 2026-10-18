@@ -3,6 +3,8 @@ import { format } from "date-fns";
 
 interface OperationSession {
   readonly id: number;
+  /** The user's own operation number (1, 2, 3...). */
+  readonly user_sequence?: number | null;
   readonly started_at: string;
   readonly ended_at: string | null;
   readonly start_seed_count: number;
@@ -14,7 +16,7 @@ interface OperationSession {
 }
 
 interface OperationCsvRow {
-  readonly operation_id: number;
+  readonly operation_number: number;
   readonly date: string;
   readonly start_time: string;
   readonly end_time: string;
@@ -96,7 +98,9 @@ function toCsvRow(
   commandCount: number
 ): OperationCsvRow {
   return {
-    operation_id: session.id,
+    // The same number people see on screen. The real database id is only
+    // used internally and is not exported.
+    operation_number: session.user_sequence ?? session.id,
     date: format(
       new Date(session.started_at),
       "yyyy-MM-dd"
@@ -130,6 +134,7 @@ export function exportOperationHistoryCsv(
   const rows = sessions.map((session) =>
     toCsvRow(
       session,
+      // Command counts are keyed by the real session id.
       commandCounts[session.id] ?? 0
     )
   );
