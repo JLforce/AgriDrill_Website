@@ -31,7 +31,7 @@ type StreamState = "connecting" | "live" | "offline";
  */
 const STREAM_URL =
   process.env.NEXT_PUBLIC_CAMERA_STREAM_URL ??
-  "http://192.168.8.140:5000/video_feed";
+  "http://192.168.8.151:5000/video_feed";
 
 // Supabase Storage bucket that holds the captured photos (private).
 const CAPTURE_BUCKET = "camera-captures";
